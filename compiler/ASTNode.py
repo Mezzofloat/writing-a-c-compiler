@@ -1,6 +1,7 @@
+from enum import Enum
+
 class ASTNode:
-    def __init__(self, ident):
-        self.ident = ident
+    def __init__(self):
         self.child = None
 
     def __str__(self):
@@ -54,7 +55,27 @@ class ASTNode:
         return tabbify("".join(s))
 
 class C_node(ASTNode):
-    pass
+    class C_type(Enum):
+        Program = 1,
+        Function = 2,
+        Return = 3,
+        Expression = 4,
+        Identifier = 5,
+        Integer = 6
+
+    def __init__(self, ident : C_type):
+        super().__init__()
+        self.ident = ident
 
 class Assembly_node(ASTNode):
-    pass
+    class Assembly_type(Enum):
+        Program = 1,
+        Function = 2,
+        Instructions = 3,
+        Mov = 4,
+        Ret = 5,
+        Imm = 6
+    
+    def __init__(self, ident : Assembly_type):
+        super().__init__()
+        self.ident = ident
