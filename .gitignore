@@ -1,0 +1,6 @@
+**/__pycache__/*
+mycc
+*.s
+test_framework/*
+templates/*
+.github/*
