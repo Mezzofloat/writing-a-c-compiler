@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from assembly_converter import convert_to_assembly_ast
+from assembly_converter import attack_to_assembly_ast, replace_pseudo, fix_instructions
+from c_to_attack import c_to_attack
 from code_emitter import emit_code
 from parser import parse_program
 from lexer import lex
@@ -13,6 +14,7 @@ argparser.add_argument('path', help="Path to the file to compile")
 argparser.add_argument('--lex', action="store_true")
 argparser.add_argument('--parse', action="store_true")
 argparser.add_argument('--codegen', action="store_true")
+argparser.add_argument('--tacky', action='store_true')
 argparser.add_argument('-S', action="store_true")
 
 args = argparser.parse_args()
@@ -45,15 +47,30 @@ if args.lex:
 # parse tokens[]
 
 C_ast = parse_program(tokens)
-#print(C_ast)
+print(C_ast)
 
 if args.parse:
     print('stopping at parse')
     exit(0)
 
+#exp_to_attack(C_ast.child.child["body"])
+ATTACK_ast = c_to_attack(C_ast)
+print(ATTACK_ast)
+
+# --tacky is required by the books' tests i'm using
+if args.tacky:
+    print('stopping at attack gen')
+    exit(0)
+
 # generate assembly ast
-Assembly_ast = convert_to_assembly_ast(C_ast)
-#print(Assembly_ast)
+Assembly_ast = attack_to_assembly_ast(ATTACK_ast)
+print(Assembly_ast)
+
+replace_pseudo(Assembly_ast.child.child["instructions"].child)
+print(Assembly_ast)
+
+fix_instructions(Assembly_ast.child.child["instructions"].child)
+print(Assembly_ast)
 
 if args.codegen:
     print('stopping at codegen')

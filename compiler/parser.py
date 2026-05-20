@@ -60,10 +60,45 @@ def parse_statement() -> C_node:
 def parse_exp() -> C_node:
     global token_idx
 
-    next = parse_int()
-    node = C_node("Expression")
-    node.child = next
-    return node
+    next = tokens[token_idx]
+
+    if type(next) is tuple and next[0] == "Constant":
+        num = parse_int()
+        node = C_node("Expression")
+        node.child = num
+        return node
+    elif next == "~" or next == "-":
+        operator = parse_unop()
+        inner_exp = parse_exp()
+
+        node = C_node("Unary")
+        node.child = {
+            "op": operator,
+            "inner_exp": inner_exp
+        }
+        return node
+    elif next == "(":
+        token_idx += 1
+        inner_exp = parse_exp()
+        expect(")")
+
+        return inner_exp
+    
+    raise SyntaxError(f"Expected expression but got {tokens[token_idx]}")
+
+def parse_unop() -> C_node:
+    global token_idx
+
+    next = tokens[token_idx]
+    token_idx += 1
+
+    match next:
+        case "~":
+            return C_node("Complement")
+        case "-":
+            return C_node("Negate")
+    
+    raise SyntaxError(f"Expected unary operator but got {next}")
 
 def parse_identifier() -> C_node:
     global token_idx

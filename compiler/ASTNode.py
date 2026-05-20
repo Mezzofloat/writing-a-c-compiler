@@ -22,15 +22,9 @@ class ASTNode:
                 s.append(str(item) + ",\n")
             s.append("]")
 
-            return "".join(s)
+            return tabbify("".join(s))
         
-        s = []
-
-        # print only the value, not the type
-        if type(self.ident) is tuple:
-            s.append(self.ident[1])
-        else:
-            s.append(self.ident)
+        s = [str(self.ident)]
 
         # only adds if there are children
         if self.child:
@@ -61,7 +55,10 @@ class C_node(ASTNode):
         Return = 3,
         Expression = 4,
         Identifier = 5,
-        Integer = 6
+        Constant = 6,
+        Unary = 7,
+        Complement = 8,
+        Negate = 9
 
     def __init__(self, ident : C_type):
         super().__init__()
@@ -74,8 +71,32 @@ class Assembly_node(ASTNode):
         Instructions = 3,
         Mov = 4,
         Ret = 5,
-        Imm = 6
+        Imm = 6,
+        Pseudo = 7,
+        Register = 8,
+        Unary = 9,
+        Neg = 10,
+        Not = 11,
+        Stack = 12,
+        AllocateStack = 13
     
     def __init__(self, ident : Assembly_type):
+        super().__init__()
+        self.ident = ident
+
+class ATTACK_node(ASTNode):
+    class ATTACK_type(Enum):
+        Program = 1,
+        Function = 2,
+        Identifier = 3,
+        Value = 4,
+        Constant = 5,
+        Variable = 6
+        Unary = 7
+        Complement = 8,
+        Negate = 9,
+        Instructions = 10
+
+    def __init__(self, ident : ATTACK_type):
         super().__init__()
         self.ident = ident
