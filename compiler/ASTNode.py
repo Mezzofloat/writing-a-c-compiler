@@ -17,36 +17,32 @@ class ASTNode:
             return newstr
         
         def print_list(lst: list) -> str:
-            s = ["[\n"]
+            s = "[\n"
             for item in lst:
-                s.append(str(item) + ",\n")
-            s.append("]")
+                s += str(item) + ",\n"
+            s += "]"
 
-            return tabbify("".join(s))
+            return s
         
-        s = [str(self.ident)]
+        s = str(self.ident)
 
         # only adds if there are children
         if self.child:
-            s.append("(\n")
+            s += "(\n"
 
             # consider the dictionaries
             if type(self.child) is dict:
                 for child in self.child:
-                    s.append(f"{child}=")
-                    if type(self.child[child]) is list:
-                        s.append(print_list(self.child[child]))
-                    else:
-                        s.append(f"{str(self.child[child])}\n")
+                    s += f"{child}={self.child[child]}\n"
             # consider the lists
             elif type(self.child) is list:
-                s.append(print_list(self.child))
+                s += print_list(self.child)
             else: 
-                s.append(str(self.child))
+                s += str(self.child)
 
-            s.append("\n)")
+            s += "\n)"
 
-        return tabbify("".join(s))
+        return tabbify(s)
 
 class C_node(ASTNode):
     class C_type(Enum):

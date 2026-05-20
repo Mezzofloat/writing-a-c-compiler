@@ -88,7 +88,6 @@ def replace_pseudo(instructions: list[Assembly_node]):
     offset = 0
     mappings = {}
 
-    print(f"Instructions are as follows: {instructions}")
     for instr in instructions:
         if instr.child:
             if "src" in instr.child and instr.child["src"].ident == "Pseudo":

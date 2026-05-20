@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from assembly_converter import attack_to_assembly_ast, replace_pseudo, fix_instructions
-from c_to_attack import c_to_attack
+from attack_code_generator import c_to_attack
 from code_emitter import emit_code
 from parser import parse_program
 from lexer import lex
