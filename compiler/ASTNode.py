@@ -32,8 +32,15 @@ class ASTNode:
 
             # consider the dictionaries
             if type(self.child) is dict:
-                for child in self.child:
-                    s += f"{child}={self.child[child]}\n"
+                keys = list(self.child.keys())
+
+                for i in range(len(keys)):
+                    child = keys[i]
+                    s += f"{child}={self.child[child]}"
+
+                    if i != len(keys) - 1:
+                        s += "\n"
+
             # consider the lists
             elif type(self.child) is list:
                 s += print_list(self.child)
