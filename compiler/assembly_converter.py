@@ -1,8 +1,9 @@
 from ASTNode import ATTACK_node, Assembly_node
 
+# the amount the stack needs to allocate, set at the end of attack_to_assembly_ast
 allocate_offset = 0
 
-# traverse the tree given in attack_ast
+# converts a tree of attack nodes into a tree of assembly nodes
 def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
     match node.ident:
         case "Binary":
@@ -156,6 +157,22 @@ def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
     
     raise SyntaxError(f"Unknown node in tree: {node}")
 
+# for all the instructions in this tree, replace the pseudo-registers
+def replace_pseudo_registers(ast: Assembly_node):
+    if ast.ident == "Program":
+        # assuming I will later implement multiple functions in a program as a list
+        if type(ast.child) is list:
+            for func in ast.child:
+                replace_pseudo_registers(func)
+        else:
+            replace_pseudo_registers(ast.child)
+    elif ast.ident == "Function":
+        # functions should have a list of instructions, which I am calling replace_pseudo on
+        replace_pseudo(ast.child["instructions"].child)
+    else:
+        raise ValueError(f"Replace function called on {ast}")
+
+# replace the pseudo-registers given in the list of instructions
 def replace_pseudo(instructions: list[Assembly_node]):
     global allocate_offset
 
@@ -212,7 +229,23 @@ def replace_pseudo(instructions: list[Assembly_node]):
 
     allocate_offset = offset
 
-def fix_instructions(instructions: list[Assembly_node]):
+# for all the instructions in this tree, fix them if needed
+def fix_instructions(ast: Assembly_node):
+    if ast.ident == "Program":
+        # assuming I will later implement multiple functions in a program as a list
+        if type(ast.child) is list:
+            for func in ast.child:
+                fix_instructions(func)
+        else:
+            fix_instructions(ast.child)
+    elif ast.ident == "Function":
+        # functions should have a list of instructions, which I am calling fix on
+        fix(ast.child["instructions"].child)
+    else:
+        raise ValueError(f"fix_instructions called on {ast}")
+
+# fix the instructions in this list if needed
+def fix(instructions: list[Assembly_node]):
     new_instruction = Assembly_node("AllocateStack")
     amount = Assembly_node(("Imm", allocate_offset))
     new_instruction.child = amount

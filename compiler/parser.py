@@ -13,6 +13,7 @@ def expect(keyword: str):
     else:
         token_idx += 1
 
+# creates an abstract syntax tree of C nodes from a list of tokens
 def parse_program(token_list) -> C_node:
     global token_idx
     global tokens

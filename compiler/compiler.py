@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from assembly_converter import attack_to_assembly_ast, replace_pseudo, fix_instructions
+from assembly_converter import attack_to_assembly_ast, replace_pseudo_registers, fix_instructions
 from attack_code_generator import c_to_attack
 from code_emitter import emit_code
 from parser import parse_program
@@ -69,11 +69,11 @@ Assembly_ast = attack_to_assembly_ast(ATTACK_ast)
 print("First Assembly_ast:")
 print(Assembly_ast)
 
-replace_pseudo(Assembly_ast.child.child["instructions"].child)
+replace_pseudo_registers(Assembly_ast)
 print("Non-pseudo ast:")
 print(Assembly_ast)
 
-fix_instructions(Assembly_ast.child.child["instructions"].child)
+fix_instructions(Assembly_ast)
 print("Fixed-instructions ast:\n")
 print(Assembly_ast)
 
