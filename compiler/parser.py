@@ -64,10 +64,7 @@ def parse_factor() -> C_node:
     next = tokens[token_idx]
 
     if type(next) is tuple and next[0] == "Constant":
-        num = parse_int()
-        node = C_node("Expression")
-        node.child = num
-        return node
+        return parse_int()
     elif next == "~" or next == "-":
         operator = parse_unop()
         inner_exp = parse_factor()

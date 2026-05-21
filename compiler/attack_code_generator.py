@@ -23,8 +23,6 @@ def exp_to_attack(exp_node : C_node, instruc):
 
                 instruc.append(r)
                 return r
-            case "Expression":
-                return exp_to_attack(exp_node.child, instruc)
             case "Unary":
                 un = ATTACK_node("Unary")
 

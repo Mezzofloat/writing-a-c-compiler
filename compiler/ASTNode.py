@@ -56,12 +56,11 @@ class C_node(ASTNode):
         Program = 1,
         Function = 2,
         Return = 3,
-        Expression = 4,
-        Identifier = 5,
-        Constant = 6,
-        Unary = 7,
-        Complement = 8,
-        Negate = 9
+        Identifier = 4,
+        Constant = 5,
+        Unary = 6,
+        Complement = 7,
+        Negate = 8
 
     def __init__(self, ident : C_type):
         super().__init__()
