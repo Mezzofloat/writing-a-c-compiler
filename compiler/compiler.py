@@ -47,6 +47,7 @@ if args.lex:
 # parse tokens[]
 
 C_ast = parse_program(tokens)
+print("C_ast:")
 print(C_ast)
 
 if args.parse:
@@ -55,6 +56,7 @@ if args.parse:
 
 #exp_to_attack(C_ast.child.child["body"])
 ATTACK_ast = c_to_attack(C_ast)
+print("ATTACK_ast:")
 print(ATTACK_ast)
 
 # --tacky is required by the books' tests i'm using
@@ -64,12 +66,15 @@ if args.tacky:
 
 # generate assembly ast
 Assembly_ast = attack_to_assembly_ast(ATTACK_ast)
+print("First Assembly_ast:")
 print(Assembly_ast)
 
 replace_pseudo(Assembly_ast.child.child["instructions"].child)
+print("Non-pseudo ast:")
 print(Assembly_ast)
 
 fix_instructions(Assembly_ast.child.child["instructions"].child)
+print("Fixed-instructions ast:\n")
 print(Assembly_ast)
 
 if args.codegen:
@@ -78,7 +83,7 @@ if args.codegen:
 
 # emit the code for each node in the tree
 
-with open(assembly, "a") as f:
+with open(assembly, "w") as f:
     print(emit_code(Assembly_ast), file=f)
 
 # assemble and link

@@ -10,6 +10,12 @@ def emit_code(node: Assembly_node) -> str:
             op = node.child["op"]
             dst = node.child["dst"]
             return f"{emit_code(op)}\t{emit_code(dst)}"
+        case "Binary":
+            op = node.child["op"]
+            src = node.child["src"]
+            dst = node.child["dst"]
+
+            return f"{emit_code(op)}\t{emit_code(src)}, {emit_code(dst)}"
         case "Neg":
             return "negl"
         case "Not":
@@ -19,12 +25,14 @@ def emit_code(node: Assembly_node) -> str:
         case ("Register", x):
             return x
         case "Program":
-            s = "\t.file	\"return_2.c\"\n\t.text\n\t.globl	main\n\t.type	main, @function\n"
-            s += emit_code(node.child)
+            s = emit_code(node.child)
             s += "\t.section .note.GNU-stack,\"\",@progbits"
             return s
         case "Function":
-            s = emit_code(node.child["name"]) + ":\n"
+            name = emit_code(node.child["name"])
+
+            s = f"\t.globl {name}\n"
+            s += name + ":\n"
             s += "\tpushq\t%rbp\n\tmovq\t%rsp, %rbp\n"
             s += emit_code(node.child["instructions"])
             return s
@@ -37,7 +45,17 @@ def emit_code(node: Assembly_node) -> str:
             s = f"movl\t{emit_code(node.child["src"])}, {emit_code(node.child["dst"])}"
             return s
         case "Ret":
-            return "movq\t%rbp, %rsp\n\tpopq\t%rbp\nret"
+            return "movq\t%rbp, %rsp\n\tpopq\t%rbp\n\tret"
+        case "Add":
+            return "addl"
+        case "Sub":
+            return "subl"
+        case "Mult":
+            return "imull"
+        case "Div":
+            return "idivl"
+        case "Sext":
+            return "cdq"
         case ("Imm", x):
             return "$" + str(x)
         case _:

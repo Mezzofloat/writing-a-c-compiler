@@ -1,10 +1,10 @@
 import re
+keywords = ["int", "void", "return"]
+token_matchers = [r"[a-zA-Z_]\w*\b", r"[0-9]+\b", r"\(", r"\)", r"{", r"}", r";", r"~", r"--", r"-", r"\*", r"\+", r"/", r"%"]
+token_types = ["ident", "constant", "int", "void", "return", "(", ")", "{", "}", ";"]
 
 def lex(content: str) -> list:
     tokens = []
-    keywords = ["int", "void", "return"]
-    token_matchers = [r"[a-zA-Z_]\w*\b", r"[0-9]+\b", r"\(", r"\)", r"{", r"}", r";", r"~", r"--", r"-"]
-    token_types = ["ident", "constant", "int", "void", "return", "(", ")", "{", "}", ";"]
     while content != "":
         # trim whitespace
         whitespace = re.match(r"\s+", content)

@@ -50,14 +50,14 @@ def parse_statement() -> C_node:
     global token_idx
 
     expect("return")
-    exp = parse_exp()
+    exp = parse_exp(0)
     expect(";")
 
     node = C_node("Return")
     node.child = exp
     return node
 
-def parse_exp() -> C_node:
+def parse_factor() -> C_node:
     global token_idx
 
     next = tokens[token_idx]
@@ -69,7 +69,7 @@ def parse_exp() -> C_node:
         return node
     elif next == "~" or next == "-":
         operator = parse_unop()
-        inner_exp = parse_exp()
+        inner_exp = parse_factor()
 
         node = C_node("Unary")
         node.child = {
@@ -79,12 +79,39 @@ def parse_exp() -> C_node:
         return node
     elif next == "(":
         token_idx += 1
-        inner_exp = parse_exp()
+        inner_exp = parse_exp(0)
         expect(")")
 
         return inner_exp
     
     raise SyntaxError(f"Expected expression but got {tokens[token_idx]}")
+
+bin_precedence = {
+    "*": 1,
+    "/": 1,
+    "%": 1,
+    "+": 0,
+    "-": 0
+}
+
+def parse_exp(min_prec: int) -> C_node:
+    left = parse_factor()
+    next = tokens[token_idx]
+    while next in bin_precedence and bin_precedence[next] >= min_prec:
+        operator = parse_binop()
+        right = parse_exp(bin_precedence[next] + 1)
+
+        new = C_node("Binary")
+        new.child = {
+            "op": operator,
+            "left": left,
+            "right": right
+        }
+
+        left = new
+        next = tokens[token_idx]
+    
+    return left
 
 def parse_unop() -> C_node:
     global token_idx
@@ -99,6 +126,26 @@ def parse_unop() -> C_node:
             return C_node("Negate")
     
     raise SyntaxError(f"Expected unary operator but got {next}")
+
+def parse_binop() -> C_node:
+    global token_idx
+
+    next = tokens[token_idx]
+    token_idx += 1
+
+    match next:
+        case "+":
+            return C_node("Add")
+        case "-":
+            return C_node("Sub")
+        case "*":
+            return C_node("Multiply")
+        case "/":
+            return C_node("Divide")
+        case "%":
+            return C_node("Modulus")
+        
+    raise SyntaxError(f"Expected binary operator but got {next}")
 
 def parse_identifier() -> C_node:
     global token_idx

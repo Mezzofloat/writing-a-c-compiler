@@ -44,10 +44,28 @@ def exp_to_attack(exp_node : C_node, instruc):
 
                 instruc.append(un)
                 return dst
-            case "Complement":
-                return ATTACK_node("Complement")
-            case "Negate":
-                return ATTACK_node("Negate")
+            case "Binary":
+                bin = ATTACK_node("Binary")
+
+                op = exp_to_attack(exp_node.child["op"], instruc)
+                left = exp_to_attack(exp_node.child["left"], instruc)
+                right = exp_to_attack(exp_node.child["right"], instruc)
+
+                dst = ATTACK_node("Variable")
+                dst_ident = ATTACK_node(("Identifier", make_tmp()))
+                dst.child = dst_ident
+
+                bin.child = {
+                    "op": op,
+                    "src1": left,
+                    "src2": right,
+                    "dst": dst
+                }
+
+                instruc.append(bin)
+                return dst
+            case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus":
+                return ATTACK_node(exp_node.ident)
             case _:
                 raise ValueError(f"Given invalid expression node: {exp_node}")
     else:
