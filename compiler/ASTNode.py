@@ -145,21 +145,45 @@ Complement, Negate, Add, Sub, Multiply, Divide, Modulus:
 """
 
 class ATTACK_node(ASTNode):
-    class ATTACK_type(Enum):
-        Program = 1,
-        Function = 2,
-        Identifier = 3,
-        Value = 4,
-        Constant = 5,
-        Variable = 6
-        Unary = 7
-        Complement = 8,
-        Negate = 9,
-        Instructions = 10
-
-    def __init__(self, ident : ATTACK_type):
+    def __init__(self, ident, child=None):
         super().__init__(ident)
-        #self.ident = ident
+        
+        def expect(exp: bool):
+            if not exp:
+                raise AssertionError(f"Error in asserting grammar on {self}")
+        
+        try:
+            match ident:
+                case "Program":
+                    expect(child.ident == "Function")
+                case "Function":
+                    expect(child["name"].ident[0] == "Identifier")
+                    expect(child["instructions"].ident == "Instructions")
+                case "Instructions":
+                    expect(instr.ident in ['Binary', 'Unary', 'Return'] for instr in child)
+                case "Return":
+                    expect(child.ident in ['Unary', 'Binary', 'Variable'] or child.ident[0] == "Constant")
+                case "Unary":
+                    expect(child["op"].ident in ["Complement", "Negate"])
+                    expect(child["src"].ident == "Variable" or child["src"].ident[0] == "Constant")
+                    expect(child["dst"].ident == "Variable")
+                case "Binary":
+                    expect(child["op"].ident in ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
+                    expect(child["src1"].ident == "Variable" or child["src1"].ident[0] == "Constant")
+                    expect(child["src2"].ident == "Variable" or child["src2"].ident[0] == "Constant")
+                    expect(child["dst"].ident == "Variable")
+                case "Variable":
+                    expect(child.ident[0] == "Identifier")
+                case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
+                    expect(child is None)
+        except AttributeError:
+            raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
+        except KeyError:
+            raise AssertionError(f"Error in accessing dict; {child} is either not dict or doesn't have required key")
+        except IndexError:
+            raise AssertionError(f"Error in indexing tuple; {child} doesn't have a tuple somewhere")
+        finally:
+            self.child = child
 
 """
 Definitions for the types of Assembly nodes:
