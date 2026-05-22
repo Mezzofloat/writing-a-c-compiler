@@ -17,9 +17,16 @@ argparser.add_argument('--codegen', action="store_true")
 argparser.add_argument('--tacky', action='store_true')
 argparser.add_argument('-S', action="store_true")
 
+argparser.add_argument('--risc-v', action="store_true")
+
 args = argparser.parse_args()
 if len(args.path) < 1 or not args.path.endswith('.c'):
     exit(1)
+
+if args.risc_v:
+    prefix = "/common/users/shared/cs211_s26_5678/rv32gc-ilp32/bin/riscv32-unknown-linux-gnu-"
+else:
+    prefix = ""
 
 preprocessed = args.path[:-2] + '.i'
 assembly = args.path[:-2] + '.s'
@@ -87,4 +94,4 @@ with open(assembly, "w") as f:
     print(emit_code(Assembly_ast), file=f)
 
 # assemble and link
-os.system(f"gcc {assembly} -o {executable}")
+os.system(f"{prefix}gcc {assembly} -o {executable}")
