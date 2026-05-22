@@ -1,7 +1,8 @@
 from enum import Enum
 
 class ASTNode:
-    def __init__(self):
+    def __init__(self, ident, child=None):
+        self.ident = ident
         self.child = None
 
     def __str__(self):
@@ -77,21 +78,42 @@ Complement, Negate, Add, Sub, Multiply, Divide, Modulus:
     -
 """
 
+
 class C_node(ASTNode):
-    class C_type(Enum):
-        Program = 1,
-        Function = 2,
-        Return = 3,
-        Identifier = 4,
-        Constant = 5,
-        Unary = 6,
-        Complement = 7,
-        Negate = 8
+    def __init__(self, ident, child=None):
+        super().__init__(ident)
 
-    def __init__(self, ident : C_type):
-        super().__init__()
-        self.ident = ident
-
+        def expect(exp: bool):
+            if not exp:
+                raise AssertionError(f"Error in asserting grammar on {self}")
+        
+        try:
+            match ident:
+                case "Program":
+                    expect(child.ident == "Function")
+                case "Function":
+                    expect(child["name"].ident[0] == "Identifier")
+                    expect(child["body"].ident == "Return")
+                case "Return":
+                    expect(child.ident in ['Unary', 'Binary'] or child.ident[0] == "Constant")
+                case "Unary":
+                    expect(child["op"].ident in ["Complement", "Negate"])
+                    expect(child["inner_exp"].ident in ["Unary", "Binary"] or child["inner_exp"].ident[0] == "Constant")
+                case "Binary":
+                    expect(child["op"].ident in ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
+                    expect(child["left"].ident in ["Unary", "Binary"] or child["left"].ident[0] == "Constant")
+                    expect(child["right"].ident in ["Unary", "Binary"] or child["right"].ident[0] == "Constant")
+                case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
+                    expect(child is None)
+        except AttributeError:
+            raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
+        except KeyError:
+            raise AssertionError(f"Error in accessing dict; {child} is either not dict or doesn't have required key")
+        except IndexError:
+            raise AssertionError(f"Error in indexing tuple; {child} doesn't have a tuple somewhere")
+        finally:
+            self.child = child
+        
 """
 Definitions for the types of ATTACK nodes:
 Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
@@ -136,8 +158,8 @@ class ATTACK_node(ASTNode):
         Instructions = 10
 
     def __init__(self, ident : ATTACK_type):
-        super().__init__()
-        self.ident = ident
+        super().__init__(ident)
+        #self.ident = ident
 
 """
 Definitions for the types of Assembly nodes:
@@ -194,5 +216,5 @@ class Assembly_node(ASTNode):
         AllocateStack = 13
     
     def __init__(self, ident : Assembly_type):
-        super().__init__()
-        self.ident = ident
+        super().__init__(ident)
+        #self.ident = ident

@@ -56,6 +56,7 @@ if args.lex:
 C_ast = parse_program(tokens)
 print("C_ast:")
 print(C_ast)
+print(C_ast.child)
 
 if args.parse:
     print('stopping at parse')

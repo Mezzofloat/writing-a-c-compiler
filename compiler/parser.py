@@ -21,8 +21,7 @@ def parse_program(token_list) -> C_node:
     tokens = token_list
 
     func = parse_function()
-    node = C_node("Program")
-    node.child = func
+    node = C_node("Program", func)
 
     if token_idx < len(tokens):
         raise SyntaxError("Did not account for every token")
@@ -40,11 +39,10 @@ def parse_function() -> C_node:
     statement = parse_statement()
     expect("}")
 
-    node = C_node("Function")
-    node.child = {
+    node = C_node("Function", {
         "name": ident,
         "body": statement
-    }
+    })
     return node
 
 def parse_statement() -> C_node:
@@ -54,8 +52,7 @@ def parse_statement() -> C_node:
     exp = parse_exp(0)
     expect(";")
 
-    node = C_node("Return")
-    node.child = exp
+    node = C_node("Return", exp)
     return node
 
 def parse_factor() -> C_node:
@@ -69,11 +66,10 @@ def parse_factor() -> C_node:
         operator = parse_unop()
         inner_exp = parse_factor()
 
-        node = C_node("Unary")
-        node.child = {
+        node = C_node("Unary", {
             "op": operator,
             "inner_exp": inner_exp
-        }
+        })
         return node
     elif next == "(":
         token_idx += 1
@@ -99,12 +95,11 @@ def parse_exp(min_prec: int) -> C_node:
         operator = parse_binop()
         right = parse_exp(bin_precedence[next] + 1)
 
-        new = C_node("Binary")
-        new.child = {
+        new = C_node("Binary", {
             "op": operator,
             "left": left,
             "right": right
-        }
+        })
 
         left = new
         next = tokens[token_idx]
