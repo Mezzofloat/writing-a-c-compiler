@@ -51,6 +51,32 @@ class ASTNode:
 
         return tabbify(s)
 
+"""
+Definitions for the types of C nodes:
+Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
+
+Program:
+    function contained in the program (Function)
+Function:
+    name: name of the function (Identifier)
+    body: body of the function (Return)
+Identifier: 
+    [name for the node with this as a child (String)]
+Return:
+    expression being returned (Constant | Unary | Binary)
+Constant:
+    [value for the node with this as a child (Int)]
+Unary:
+    op: unary operator that acts on the inner expression (Complement | Negate)
+    inner_exp: the expression that is being acted on (Constant | Unary | Binary)
+Binary:
+    op: binary operator that acts on the left and right operands (Add | Sub | Multiply | Divide | Modulus)
+    left: left operand (Constant | Unary | Binary)
+    right: right operand (Constant | Unary | Binary)
+Complement, Negate, Add, Sub, Multiply, Divide, Modulus:
+    -
+"""
+
 class C_node(ASTNode):
     class C_type(Enum):
         Program = 1,
@@ -66,7 +92,92 @@ class C_node(ASTNode):
         super().__init__()
         self.ident = ident
 
+"""
+Definitions for the types of ATTACK nodes:
+Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
+
+Program:
+    function contained in the program (Function)
+Function:
+    name: name of the function (Identifier)
+    instructions: list of instructions (Instructions)
+Instructions:
+    list of ATTACK instructions (Binary | Unary | Return)
+Binary:
+    op: operation (Add | Sub | Multiply | Divide | Modulus)
+    src1: left operand (Constant | Variable)
+    src2: right operand (Constant | Variable)
+    dst: destination of operation (Variable)
+Unary:
+    op: operation (Complement | Negate)
+    src: operand (Constant | Variable)
+    dst: destination of operation (Variable)
+Constant:
+    [value for the node with this as a child (Int)]
+Variable:
+    temporary name for this variable (Identifier)
+Return:
+    expression being returned (Constant | Variable | Unary | Binary)
+Complement, Negate, Add, Sub, Multiply, Divide, Modulus:
+    -
+"""
+
+class ATTACK_node(ASTNode):
+    class ATTACK_type(Enum):
+        Program = 1,
+        Function = 2,
+        Identifier = 3,
+        Value = 4,
+        Constant = 5,
+        Variable = 6
+        Unary = 7
+        Complement = 8,
+        Negate = 9,
+        Instructions = 10
+
+    def __init__(self, ident : ATTACK_type):
+        super().__init__()
+        self.ident = ident
+
+"""
+Definitions for the types of Assembly nodes:
+Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
+
+Program:
+    function contained in the program (Function)
+Function:
+    name: name of the function (Identifier)
+    instructions: list of instructions (Instructions)
+Identifier:
+    [name for the node with this as a child (String)]
+Instructions:
+    list of assembly instructions (Binary | Unary | Mov | Sext | Ret)
+Binary:
+    op: binary operation being applied to destination (Add | Sub | Mult | Div)
+    src: left operand (Stack | Register | Imm)
+    dst: right operand, and destination of operation (Register | Stack)
+    (unable to operate on Stack and Stack)
+Unary:
+    op: unary operation being applied to destination (Not | Neg | Div)
+    dst: destination of operation (Register | Stack)
+    (for Div, dst is src and EDX:EAX is dst)
+Mov:
+    src: source from which destination gets its value (Stack | Register | Imm)
+    dst: destination, which is set to the value in source (Register | Stack)
+    (unable to move from Stack to Stack)
+Stack:
+    [address on the stack that the node with this as a child is using (Int)]
+Register:
+    [register that the node with this as a child is referring to (String)]
+    (Pseudo is ultimately converted to this)
+Imm:
+    [value for the node with this as a child (Int)]
+Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend):
+    -
+"""
+
 class Assembly_node(ASTNode):
+
     class Assembly_type(Enum):
         Program = 1,
         Function = 2,
@@ -83,22 +194,5 @@ class Assembly_node(ASTNode):
         AllocateStack = 13
     
     def __init__(self, ident : Assembly_type):
-        super().__init__()
-        self.ident = ident
-
-class ATTACK_node(ASTNode):
-    class ATTACK_type(Enum):
-        Program = 1,
-        Function = 2,
-        Identifier = 3,
-        Value = 4,
-        Constant = 5,
-        Variable = 6
-        Unary = 7
-        Complement = 8,
-        Negate = 9,
-        Instructions = 10
-
-    def __init__(self, ident : ATTACK_type):
         super().__init__()
         self.ident = ident
