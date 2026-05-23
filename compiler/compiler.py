@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-from assembly_converter import attack_to_assembly_ast, replace_pseudo_registers, fix_instructions
+import assembly_converter
+import risc_converter
+import risc_emitter
 from attack_code_generator import c_to_attack
-from code_emitter import emit_code
+import code_emitter
 from parser import parse_program
 from lexer import lex
 import argparse
@@ -23,10 +25,6 @@ args = argparser.parse_args()
 if len(args.path) < 1 or not args.path.endswith('.c'):
     exit(1)
 
-if args.risc_v:
-    prefix = "/common/users/shared/cs211_s26_5678/rv32gc-ilp32/bin/riscv32-unknown-linux-gnu-"
-else:
-    prefix = ""
 
 preprocessed = args.path[:-2] + '.i'
 assembly = args.path[:-2] + '.s'
@@ -56,7 +54,6 @@ if args.lex:
 C_ast = parse_program(tokens)
 print("C_ast:")
 print(C_ast)
-print(C_ast.child)
 
 if args.parse:
     print('stopping at parse')
@@ -72,18 +69,45 @@ if args.tacky:
     print('stopping at attack gen')
     exit(0)
 
-# generate assembly ast
-Assembly_ast = attack_to_assembly_ast(ATTACK_ast)
-print("First Assembly_ast:")
-print(Assembly_ast)
+# this is where the table splits, risc-v and x86 have different ASTs
+if args.risc_v:
+    prefix = "/common/users/shared/cs211_s26_5678/rv32gc-ilp32/bin/riscv32-unknown-linux-gnu-"
+    print("compiling for risc-v")
 
-replace_pseudo_registers(Assembly_ast)
-print("Non-pseudo ast:")
-print(Assembly_ast)
+    # generate risc-v ast
+    RISC_ast = risc_converter.attack_to_risc_ast(ATTACK_ast)
+    print("First RISC_ast:")
+    print(RISC_ast)
 
-fix_instructions(Assembly_ast)
-print("Fixed-instructions ast:\n")
-print(Assembly_ast)
+    risc_converter.replace_pseudo_registers(RISC_ast)
+    print("Non-pseudo ast:")
+    print(RISC_ast)
+
+    risc_converter.fix_instructions(RISC_ast)
+    print("Fixed-instructions ast:")
+    print(RISC_ast)
+
+    code = RISC_ast
+    emit_code = risc_emitter.emit_risc
+else:
+    prefix = ""
+    print("compiling for x86")
+
+    # generate assembly ast
+    Assembly_ast = assembly_converter.attack_to_assembly_ast(ATTACK_ast)
+    print("First Assembly_ast:")
+    print(Assembly_ast)
+
+    assembly_converter.replace_pseudo_registers(Assembly_ast)
+    print("Non-pseudo ast:")
+    print(Assembly_ast)
+
+    assembly_converter.fix_instructions(Assembly_ast)
+    print("Fixed-instructions ast:")
+    print(Assembly_ast)
+
+    code = Assembly_ast
+    emit_code = code_emitter.emit_code
 
 if args.codegen:
     print('stopping at codegen')
@@ -92,7 +116,7 @@ if args.codegen:
 # emit the code for each node in the tree
 
 with open(assembly, "w") as f:
-    print(emit_code(Assembly_ast), file=f)
+    print(emit_code(code), file=f)
 
 # assemble and link
 os.system(f"{prefix}gcc {assembly} -o {executable}")

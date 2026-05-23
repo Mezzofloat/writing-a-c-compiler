@@ -199,23 +199,23 @@ Identifier:
 Instructions:
     list of assembly instructions (Binary | Unary | Mov | Sext | Ret)
 Binary:
-    op: binary operation being applied to destination (Add | Sub | Mult | Div)
+    op: binary operation being applied to destination (Add | Sub | Mult)
     src: left operand (Stack | Register | Imm)
     dst: right operand, and destination of operation (Register | Stack)
     (unable to operate on Stack and Stack)
 Unary:
     op: unary operation being applied to destination (Not | Neg | Div)
     dst: destination of operation (Register | Stack)
-    (for Div, dst is src and EDX:EAX is dst)
+    (for Div, dst is the dividend and EDX:EAX is destination)
 Mov:
     src: source from which destination gets its value (Stack | Register | Imm)
     dst: destination, which is set to the value in source (Register | Stack)
     (unable to move from Stack to Stack)
 Stack:
     [address on the stack that the node with this as a child is using (Int)]
+    (Pseudo is ultimately converted to this)
 Register:
     [register that the node with this as a child is referring to (String)]
-    (Pseudo is ultimately converted to this)
 Imm:
     [value for the node with this as a child (Int)]
 Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend):
@@ -223,22 +223,97 @@ Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend):
 """
 
 class Assembly_node(ASTNode):
-
-    class Assembly_type(Enum):
-        Program = 1,
-        Function = 2,
-        Instructions = 3,
-        Mov = 4,
-        Ret = 5,
-        Imm = 6,
-        Pseudo = 7,
-        Register = 8,
-        Unary = 9,
-        Neg = 10,
-        Not = 11,
-        Stack = 12,
-        AllocateStack = 13
-    
-    def __init__(self, ident : Assembly_type):
+    def __init__(self, ident, child=None):
         super().__init__(ident)
-        #self.ident = ident
+
+        def expect(exp: bool):
+            if not exp:
+                raise AssertionError(f"Error in asserting grammar on {self}")
+        
+        try:
+            match ident:
+                case "Program":
+                    expect(child.ident == "Function")
+                case "Function":
+                    expect(child["name"].ident[0] == "Identifier")
+                    expect(child["instructions"].ident == "Instructions")
+                case "Instructions":
+                    expect(instr.ident in ['Binary', 'Unary', 'Mov', 'Sext', 'Ret'] for instr in child)
+                case "Unary":
+                    expect(child["op"].ident in ["Not", "Neg", "Div"])
+                    expect(child["dst"].ident[0] in ['Stack','Register','Imm'] or child["dst"].ident == "Pseudo")
+                case "Binary":
+                    expect(child["op"].ident in ['Add', 'Sub', 'Mult'])
+                    expect(child["src"].ident[0] in ['Stack', 'Register', 'Imm'] or child["src"].ident == "Pseudo")
+                    expect(child["dst"].ident[0] in ['Stack', 'Register'] or child["dst"].ident == "Pseudo")
+                case "Mov":
+                    expect(child["src"].ident[0] in ['Stack', 'Register', 'Imm'] or child["src"].ident == "Pseudo")
+                    expect(child["dst"].ident[0] in ['Stack', 'Register'] or child["dst"].ident == "Pseudo")
+                case "Pseudo":
+                    expect(child.ident[0] == "Identifier")
+                case "Not" | "Neg" | "Add" | "Sub" | "Mult" | "Div" | ("Identifier", _) | ("Imm", _) | ("Stack", _) | ("Register", _) | "Ret" | "Sext":
+                    expect(child is None)
+        except AttributeError:
+            raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
+        except KeyError:
+            raise AssertionError(f"Error in accessing dict; {child} is either not dict or doesn't have required key")
+        except IndexError:
+            raise AssertionError(f"Error in indexing tuple; {child} doesn't have a tuple somewhere")
+        finally:
+            self.child = child
+
+"""
+Definitions for the types of RISC-V nodes:
+Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
+
+Program:
+    function contained in the program (Function)
+Function:
+    name: name of the function (Identifier)
+    instructions: list of instructions (Instructions)
+Identifier:
+    [name for the node with this as a child (String)]
+Instructions:
+    list of assembly instructions (Load | Ret)
+Load:
+    src: source which destination gets value from (Imm)
+    dst: destination register (Register)
+Imm:
+    [value for the node with this as a child (Int)]
+Register:
+    [register that node with this as a child uses (String)]
+Ret:
+    -
+"""
+
+class RISC_node(ASTNode):
+    def __init__(self, ident, child=None):
+        super().__init__(ident)
+
+        def expect(exp: bool):
+            if not exp:
+                raise AssertionError(f"Error in asserting grammar on {self}")
+        
+        try:
+            match ident:
+                case "Program":
+                    expect(child.ident == "Function")
+                case "Function":
+                    expect(child["name"].ident[0] == "Identifier")
+                    expect(child["instructions"].ident == "Instructions")
+                case "Instructions":
+                    expect(instr.ident in ['Binary', 'Unary', 'Mov', 'Ret', 'Load', 'Store'] for instr in child)
+                case "Load":
+                    expect(child["src"].ident[0] == "Imm")
+                    expect(child["dst"].ident[0] == "Register")
+                case ("Identifier", _) | ("Imm", _) | ("Register", _) | "Ret":
+                    expect(child is None)
+
+        except AttributeError:
+            raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
+        except KeyError:
+            raise AssertionError(f"Error in accessing dict; {child} is either not dict or doesn't have required key")
+        except IndexError:
+            raise AssertionError(f"Error in indexing tuple; {child} doesn't have a tuple somewhere")
+        finally:
+            self.child = child
