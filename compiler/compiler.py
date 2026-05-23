@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import assembly_converter
 import risc_converter
+import x86_converter
 import risc_emitter
+import x86_emitter
 from attack_code_generator import c_to_attack
-import code_emitter
 from parser import parse_program
 from lexer import lex
 import argparse
@@ -19,7 +19,7 @@ argparser.add_argument('--codegen', action="store_true")
 argparser.add_argument('--tacky', action='store_true')
 argparser.add_argument('-S', action="store_true")
 
-argparser.add_argument('--risc-v', action="store_true")
+argparser.add_argument('--assembly-lang', '-l', choices=['risc-v', 'x86'])
 
 args = argparser.parse_args()
 if len(args.path) < 1 or not args.path.endswith('.c'):
@@ -70,7 +70,7 @@ if args.tacky:
     exit(0)
 
 # this is where the table splits, risc-v and x86 have different ASTs
-if args.risc_v:
+if args.assembly_lang == "risc-v":
     prefix = "/common/users/shared/cs211_s26_5678/rv32gc-ilp32/bin/riscv32-unknown-linux-gnu-"
     print("compiling for risc-v")
 
@@ -94,20 +94,20 @@ else:
     print("compiling for x86")
 
     # generate assembly ast
-    Assembly_ast = assembly_converter.attack_to_assembly_ast(ATTACK_ast)
+    Assembly_ast = x86_converter.attack_to_x86_ast(ATTACK_ast)
     print("First Assembly_ast:")
     print(Assembly_ast)
 
-    assembly_converter.replace_pseudo_registers(Assembly_ast)
+    x86_converter.replace_pseudo_registers(Assembly_ast)
     print("Non-pseudo ast:")
     print(Assembly_ast)
 
-    assembly_converter.fix_instructions(Assembly_ast)
+    x86_converter.fix_instructions(Assembly_ast)
     print("Fixed-instructions ast:")
     print(Assembly_ast)
 
     code = Assembly_ast
-    emit_code = code_emitter.emit_code
+    emit_code = x86_emitter.emit_x86
 
 if args.codegen:
     print('stopping at codegen')

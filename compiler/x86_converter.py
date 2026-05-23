@@ -4,12 +4,12 @@ from ASTNode import ATTACK_node, Assembly_node
 allocate_offset = 0
 
 # converts a tree of attack nodes into a tree of assembly nodes
-def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
+def attack_to_x86_ast(node: ATTACK_node) -> Assembly_node:
     match node.ident:
         case "Binary":
             if node.child["op"].ident == "Divide":
-                src1 = attack_to_assembly_ast(node.child["src1"])
-                src2 = attack_to_assembly_ast(node.child["src2"])
+                src1 = attack_to_x86_ast(node.child["src1"])
+                src2 = attack_to_x86_ast(node.child["src2"])
                 reg = Assembly_node(("Register", "%eax"))
 
                 mov = Assembly_node("Mov", {
@@ -27,13 +27,13 @@ def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
                 result = Assembly_node(("Register", "%eax"))
                 movback = Assembly_node("Mov", {
                     "src": result,
-                    "dst": attack_to_assembly_ast(node.child["dst"])
+                    "dst": attack_to_x86_ast(node.child["dst"])
                 })
 
                 return [mov, cdq, idiv, movback]
             elif node.child["op"].ident == "Modulus":
-                src1 = attack_to_assembly_ast(node.child["src1"])
-                src2 = attack_to_assembly_ast(node.child["src2"])
+                src1 = attack_to_x86_ast(node.child["src1"])
+                src2 = attack_to_x86_ast(node.child["src2"])
                 reg = Assembly_node(("Register", "%eax"))
 
                 mov = Assembly_node("Mov", {
@@ -53,20 +53,20 @@ def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
                 result = Assembly_node(("Register", "%edx"))
                 movback = Assembly_node("Mov", {
                     "src": result,
-                    "dst": attack_to_assembly_ast(node.child["dst"])
+                    "dst": attack_to_x86_ast(node.child["dst"])
                 })
 
                 return [mov, cdq, idiv, movback]
             else:
-                left = attack_to_assembly_ast(node.child["src1"])
-                dst = attack_to_assembly_ast(node.child["dst"])
+                left = attack_to_x86_ast(node.child["src1"])
+                dst = attack_to_x86_ast(node.child["dst"])
                 mov = Assembly_node("Mov", {
                     "src": left,
                     "dst": dst
                 })
 
-                binop = attack_to_assembly_ast(node.child["op"])
-                right = attack_to_assembly_ast(node.child["src2"])
+                binop = attack_to_x86_ast(node.child["op"])
+                right = attack_to_x86_ast(node.child["src2"])
                 binary = Assembly_node("Binary", {
                     "op": binop,
                     "src": right,
@@ -78,13 +78,13 @@ def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
             new_instructions = []
 
             for instr in node.child:
-                outcome = attack_to_assembly_ast(instr)
+                outcome = attack_to_x86_ast(instr)
 
                 if type(outcome) is list:
                     for entry in outcome:
                         new_instructions.append(entry)
                 else:
-                    new_instructions.append(attack_to_assembly_ast(instr))
+                    new_instructions.append(attack_to_x86_ast(instr))
             
             new_node = Assembly_node("Instructions", new_instructions)
 
@@ -92,7 +92,7 @@ def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
         case ("Constant", x):
             return Assembly_node(("Imm", x))
         case "Variable":
-            ps = Assembly_node("Pseudo", attack_to_assembly_ast(node.child))
+            ps = Assembly_node("Pseudo", attack_to_x86_ast(node.child))
             return ps
         case "Complement":
             return Assembly_node("Not")
@@ -102,18 +102,18 @@ def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
             return Assembly_node("Mult")
         case "Unary":
             mov = Assembly_node("Mov", {
-                "src": attack_to_assembly_ast(node.child["src"]),
-                "dst": attack_to_assembly_ast(node.child["dst"])
+                "src": attack_to_x86_ast(node.child["src"]),
+                "dst": attack_to_x86_ast(node.child["dst"])
             })
 
             operate = Assembly_node("Unary", {
-                "op": attack_to_assembly_ast(node.child["op"]),
-                "dst": attack_to_assembly_ast(node.child["dst"])
+                "op": attack_to_x86_ast(node.child["op"]),
+                "dst": attack_to_x86_ast(node.child["dst"])
             })
 
             return [mov, operate]
         case "Return":
-            val = attack_to_assembly_ast(node.child)
+            val = attack_to_x86_ast(node.child)
 
             reg = Assembly_node(("Register","%eax"))
 
@@ -127,15 +127,15 @@ def attack_to_assembly_ast(node: ATTACK_node) -> Assembly_node:
             return [mov, ret]
         case "Function":
             func = Assembly_node("Function", {
-                "name": attack_to_assembly_ast(node.child["name"]),
-                "instructions": attack_to_assembly_ast(node.child["instructions"])
+                "name": attack_to_x86_ast(node.child["name"]),
+                "instructions": attack_to_x86_ast(node.child["instructions"])
             })
 
             return func
         case _:
             if node.child:
                 if type(node.child) is ATTACK_node:
-                    child = attack_to_assembly_ast(node.child)
+                    child = attack_to_x86_ast(node.child)
                     parent = Assembly_node(node.ident, child)
                 else:
                     raise ValueError(f"Child of {node} is not expected type")
