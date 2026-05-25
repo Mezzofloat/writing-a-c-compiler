@@ -229,36 +229,65 @@ Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend):
 class Assembly_node(ASTNode):
     def __init__(self, ident, child=None):
         super().__init__(ident)
-
-        def expect(exp: bool):
-            if not exp:
-                raise AssertionError(f"Error in asserting grammar on {self}")
         
         try:
+            LIST = 0
+
+            def expect(*args):
+                if len(args) == 1:
+                    if type(args[0]) is not list or type(child) is not Assembly_node:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    ls = args[0]
+                    
+                    if child.ident not in ls and child.ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 2:
+                    if args[0] == LIST:
+                        for entry in child:
+                            if entry.ident not in args[1]:
+                                raise AssertionError(f"Error in asserting grammar on {self}")
+                            
+                        return
+
+                    if type(args[0]) is not str or type(args[1]) is not list or type(child) is not dict:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    key = args[0]
+                    ls = args[1]
+
+                    if child[key].ident not in ls and child[key].ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 0:
+                    if child is not None:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                else:
+                    raise SyntaxError("Incorrect number of arguments")
+                
             match ident:
                 case "Program":
-                    expect(child.ident == "Function")
+                    expect(["Function"])
                 case "Function":
-                    expect(child["name"].ident[0] == "Identifier")
-                    expect(child["instructions"].ident == "Instructions")
+                    expect("name", ["Identifier"])
+                    expect("instructions", ["Instructions"])
                 case "Instructions":
-                    expect(instr.ident in ['Binary', 'Unary', 'Mov', 'Sext', 'Ret'] for instr in child)
+                    expect(LIST, ['Binary', 'Unary', 'Mov', 'Sext', 'Ret'])
                 case "Unary":
-                    expect(child["op"].ident in ["Not", "Neg", "Div"])
-                    expect(child["dst"].ident[0] in ['Stack','Register','Imm'] or child["dst"].ident == "Pseudo")
+                    expect("op", ["Not", "Neg", "Div"])
+                    expect("dst", ['Pseudo', 'Stack','Register','Imm'])
                 case "Binary":
-                    expect(child["op"].ident in ['Add', 'Sub', 'Mult'])
-                    expect(child["src"].ident[0] in ['Stack', 'Register', 'Imm'] or child["src"].ident == "Pseudo")
-                    expect(child["dst"].ident[0] in ['Stack', 'Register'] or child["dst"].ident == "Pseudo")
+                    expect("op", ['Add', 'Sub', 'Mult'])
+                    expect("src", ['Pseudo', 'Stack', 'Register', 'Imm'])
+                    expect("dst", ['Pseudo', 'Stack', 'Register'])
                 case "Mov":
-                    expect(child["src"].ident[0] in ['Stack', 'Register', 'Imm'] or child["src"].ident == "Pseudo")
-                    expect(child["dst"].ident[0] in ['Stack', 'Register'] or child["dst"].ident == "Pseudo")
+                    expect("src", ['Pseudo', 'Stack', 'Register', 'Imm'])
+                    expect("dst", ['Pseudo', 'Stack', 'Register'])
                 case "AllocateStack":
-                    expect(child.ident[0] == "Imm")
+                    expect(["Imm"])
                 case "Pseudo":
-                    expect(child.ident[0] == "Identifier")
+                    expect(["Identifier"])
                 case "Not" | "Neg" | "Add" | "Sub" | "Mult" | "Div" | ("Identifier", _) | ("Imm", _) | ("Stack", _) | ("Register", _) | "Ret" | "Sext":
-                    expect(child is None)
+                    expect()
                 case _:
                     raise ValueError(f"unexpected node {ident}")
         except AttributeError:
