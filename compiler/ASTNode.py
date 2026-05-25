@@ -82,29 +82,58 @@ Complement, Negate, Add, Sub, Multiply, Divide, Modulus:
 class C_node(ASTNode):
     def __init__(self, ident, child=None):
         super().__init__(ident)
-
-        def expect(exp: bool):
-            if not exp:
-                raise AssertionError(f"Error in asserting grammar on {self}")
         
         try:
+            LIST = 0
+
+            def expect(*args):
+                if len(args) == 1:
+                    if type(args[0]) is not list or type(child) is not C_node:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    ls = args[0]
+                    
+                    if child.ident not in ls and child.ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 2:
+                    if args[0] == LIST:
+                        for entry in child:
+                            if entry.ident not in args[1]:
+                                raise AssertionError(f"Error in asserting grammar on {self}")
+                            
+                        return
+
+                    if type(args[0]) is not str or type(args[1]) is not list or type(child) is not dict:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    key = args[0]
+                    ls = args[1]
+
+                    if child[key].ident not in ls and child[key].ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 0:
+                    if child is not None:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                else:
+                    raise SyntaxError("Incorrect number of arguments")
+                
             match ident:
                 case "Program":
-                    expect(child.ident == "Function")
+                    expect(["Function"])
                 case "Function":
-                    expect(child["name"].ident[0] == "Identifier")
-                    expect(child["body"].ident == "Return")
+                    expect("name", ["Identifier"])
+                    expect("body", ["Return"])
                 case "Return":
-                    expect(child.ident in ['Unary', 'Binary'] or child.ident[0] == "Constant")
+                    expect(['Constant', 'Unary', 'Binary'])
                 case "Unary":
-                    expect(child["op"].ident in ["Complement", "Negate"])
-                    expect(child["inner_exp"].ident in ["Unary", "Binary"] or child["inner_exp"].ident[0] == "Constant")
+                    expect("op", ["Complement", "Negate"])
+                    expect("inner_exp", ["Constant", "Unary", "Binary"])
                 case "Binary":
-                    expect(child["op"].ident in ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
-                    expect(child["left"].ident in ["Unary", "Binary"] or child["left"].ident[0] == "Constant")
-                    expect(child["right"].ident in ["Unary", "Binary"] or child["right"].ident[0] == "Constant")
+                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
+                    expect("left", ["Constant", "Unary", "Binary"])
+                    expect("right", ["Constant", "Unary", "Binary"])
                 case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
-                    expect(child is None)
+                    expect()
                 case _:
                     raise ValueError(f"unexpected node {ident}")
         except AttributeError:
@@ -150,34 +179,63 @@ class ATTACK_node(ASTNode):
     def __init__(self, ident, child=None):
         super().__init__(ident)
         
-        def expect(exp: bool):
-            if not exp:
-                raise AssertionError(f"Error in asserting grammar on {self}")
-        
         try:
+            LIST = 0
+
+            def expect(*args):
+                if len(args) == 1:
+                    if type(args[0]) is not list or type(child) is not ATTACK_node:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    ls = args[0]
+                    
+                    if child.ident not in ls and child.ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 2:
+                    if args[0] == LIST:
+                        for entry in child:
+                            if entry.ident not in args[1]:
+                                raise AssertionError(f"Error in asserting grammar on {self}")
+                            
+                        return
+
+                    if type(args[0]) is not str or type(args[1]) is not list or type(child) is not dict:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    key = args[0]
+                    ls = args[1]
+
+                    if child[key].ident not in ls and child[key].ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 0:
+                    if child is not None:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                else:
+                    raise SyntaxError("Incorrect number of arguments")
+                
             match ident:
                 case "Program":
-                    expect(child.ident == "Function")
+                    expect(["Function"])
                 case "Function":
-                    expect(child["name"].ident[0] == "Identifier")
-                    expect(child["instructions"].ident == "Instructions")
+                    expect("name", ["Identifier"])
+                    expect("instructions", ["Instructions"])
                 case "Instructions":
-                    expect(instr.ident in ['Binary', 'Unary', 'Return'] for instr in child)
+                    expect(LIST, ['Binary', 'Unary', 'Return'])
                 case "Return":
-                    expect(child.ident in ['Unary', 'Binary', 'Variable'] or child.ident[0] == "Constant")
+                    expect(['Unary', 'Binary', 'Variable', 'Constant'])
                 case "Unary":
-                    expect(child["op"].ident in ["Complement", "Negate"])
-                    expect(child["src"].ident == "Variable" or child["src"].ident[0] == "Constant")
-                    expect(child["dst"].ident == "Variable")
+                    expect("op", ["Complement", "Negate"])
+                    expect("src", ["Variable", "Constant"])
+                    expect("dst", ["Variable"])
                 case "Binary":
-                    expect(child["op"].ident in ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
-                    expect(child["src1"].ident == "Variable" or child["src1"].ident[0] == "Constant")
-                    expect(child["src2"].ident == "Variable" or child["src2"].ident[0] == "Constant")
-                    expect(child["dst"].ident == "Variable")
+                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
+                    expect("src1", ["Variable", "Constant"])
+                    expect("src2", ["Variable", "Constant"])
+                    expect("dst", ["Variable"])
                 case "Variable":
-                    expect(child.ident[0] == "Identifier")
+                    expect(["Identifier"])
                 case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
-                    expect(child is None)
+                    expect()
                 case _:
                     raise ValueError(f"unexpected node {ident}")
         except AttributeError:
