@@ -308,36 +308,65 @@ Ret, Not, Neg:
 class RISC_node(ASTNode):
     def __init__(self, ident, child=None):
         super().__init__(ident)
-
-        def expect(exp: bool):
-            if not exp:
-                raise AssertionError(f"Error in asserting grammar on {self}")
         
         try:
+            LIST = 0
+
+            def expect(*args):
+                if len(args) == 1:
+                    if type(args[0]) is not list or type(child) is not RISC_node:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    ls = args[0]
+                    
+                    if child.ident not in ls and child.ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 2:
+                    if args[0] == LIST:
+                        for entry in child:
+                            if entry.ident not in args[1]:
+                                raise AssertionError(f"Error in asserting grammar on {self}")
+                            
+                        return
+
+                    if type(args[0]) is not str or type(args[1]) is not list or type(child) is not dict:
+                        raise TypeError(f"Error in function call of expect({args})")
+                    
+                    key = args[0]
+                    ls = args[1]
+
+                    if child[key].ident not in ls and child[key].ident[0] not in ls:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                elif len(args) == 0:
+                    if child is not None:
+                        raise AssertionError(f"Error in asserting grammar on {self}")
+                else:
+                    raise SyntaxError("Incorrect number of arguments")
+
             match ident:
                 case "Program":
-                    expect(child.ident == "Function")
+                    expect(["Function"])
                 case "Function":
-                    expect(child["name"].ident[0] == "Identifier")
-                    expect(child["instructions"].ident == "Instructions")
+                    expect("name", ["Identifier"])
+                    expect("instructions", ["Instructions"])
                 case "Instructions":
-                    expect(instr.ident in ['Unary', 'Ret', 'Load', 'Store'] for instr in child)
+                    expect(LIST, ['Unary', 'Ret', 'Load', 'Store'])
                 case "Unary":
-                    expect(child["op"].ident in ['Not', 'Neg'])
-                    expect(child["src"].ident[0] in ['Stack', 'Imm', 'Register'] or child["src"].ident == "Pseudo")
-                    expect(child["dst"].ident[0] in ['Stack', 'Register'] or child["dst"].ident == "Pseudo")
+                    expect("op", ['Not', 'Neg'])
+                    expect("src", ['Pseudo', 'Stack', 'Imm', 'Register'])
+                    expect("dst", ['Pseudo', 'Stack', 'Register'])
                 case "Load":
-                    expect(child["src"].ident[0] in ['Imm', 'Stack'] or child["src"].ident == "Pseudo")
-                    expect(child["dst"].ident[0] == "Register")
+                    expect("src", ['Pseudo', 'Imm', 'Stack'])
+                    expect("dst", ["Register"])
                 case "Store":
-                    expect(child["src"].ident[0] == "Register")
-                    expect(child["dst"].ident[0] == "Stack" or child["dst"].ident == "Pseudo")
+                    expect("src", ["Register"])
+                    expect("dst", ["Pseudo", "Stack"])
                 case "Pseudo":
-                    expect(child.ident[0] == "Identifier")
+                    expect(["Identifier"])
                 case "AllocateStack":
-                    expect(child.ident[0] == "Imm")
+                    expect(["Imm"])
                 case ("Identifier", _) | ("Imm", _) | ("Register", _) | ("Stack", _) | "Ret" | "Not" | "Neg":
-                    expect(child is None)
+                    expect()
                 case _:
                     raise ValueError(f"unexpected node {ident}")
 
