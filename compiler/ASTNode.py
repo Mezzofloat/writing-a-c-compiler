@@ -105,6 +105,8 @@ class C_node(ASTNode):
                     expect(child["right"].ident in ["Unary", "Binary"] or child["right"].ident[0] == "Constant")
                 case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
                     expect(child is None)
+                case _:
+                    raise ValueError(f"unexpected node {ident}")
         except AttributeError:
             raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
         except KeyError:
@@ -176,6 +178,8 @@ class ATTACK_node(ASTNode):
                     expect(child.ident[0] == "Identifier")
                 case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
                     expect(child is None)
+                case _:
+                    raise ValueError(f"unexpected node {ident}")
         except AttributeError:
             raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
         except KeyError:
@@ -249,10 +253,14 @@ class Assembly_node(ASTNode):
                 case "Mov":
                     expect(child["src"].ident[0] in ['Stack', 'Register', 'Imm'] or child["src"].ident == "Pseudo")
                     expect(child["dst"].ident[0] in ['Stack', 'Register'] or child["dst"].ident == "Pseudo")
+                case "AllocateStack":
+                    expect(child.ident[0] == "Imm")
                 case "Pseudo":
                     expect(child.ident[0] == "Identifier")
                 case "Not" | "Neg" | "Add" | "Sub" | "Mult" | "Div" | ("Identifier", _) | ("Imm", _) | ("Stack", _) | ("Register", _) | "Ret" | "Sext":
                     expect(child is None)
+                case _:
+                    raise ValueError(f"unexpected node {ident}")
         except AttributeError:
             raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
         except KeyError:
@@ -274,15 +282,26 @@ Function:
 Identifier:
     [name for the node with this as a child (String)]
 Instructions:
-    list of assembly instructions (Load | Ret)
+    list of assembly instructions (Unary | Load | Store | Ret)
+Unary:
+    op: operation (Not | Neg)
+    src: operand (Stack | Imm | Register)
+    dst: result (Stack | Register)
 Load:
-    src: source which destination gets value from (Imm)
+    src: source which destination gets value from (Imm | Stack)
     dst: destination register (Register)
+Store:
+    src: source register which destination gets value from (Register)
+    dst: destination on the stack (Stack)
 Imm:
     [value for the node with this as a child (Int)]
+Stack:
+    [address away from sp where the value is at (Int)]
+AllocateStack:
+    amount to be allocated (Imm)
 Register:
     [register that node with this as a child uses (String)]
-Ret:
+Ret, Not, Neg:
     -
 """
 
@@ -302,12 +321,25 @@ class RISC_node(ASTNode):
                     expect(child["name"].ident[0] == "Identifier")
                     expect(child["instructions"].ident == "Instructions")
                 case "Instructions":
-                    expect(instr.ident in ['Binary', 'Unary', 'Mov', 'Ret', 'Load', 'Store'] for instr in child)
+                    expect(instr.ident in ['Unary', 'Ret', 'Load', 'Store'] for instr in child)
+                case "Unary":
+                    expect(child["op"].ident in ['Not', 'Neg'])
+                    expect(child["src"].ident[0] in ['Stack', 'Imm', 'Register'] or child["src"].ident == "Pseudo")
+                    expect(child["dst"].ident[0] in ['Stack', 'Register'] or child["dst"].ident == "Pseudo")
                 case "Load":
-                    expect(child["src"].ident[0] == "Imm")
+                    expect(child["src"].ident[0] in ['Imm', 'Stack'] or child["src"].ident == "Pseudo")
                     expect(child["dst"].ident[0] == "Register")
-                case ("Identifier", _) | ("Imm", _) | ("Register", _) | "Ret":
+                case "Store":
+                    expect(child["src"].ident[0] == "Register")
+                    expect(child["dst"].ident[0] == "Stack" or child["dst"].ident == "Pseudo")
+                case "Pseudo":
+                    expect(child.ident[0] == "Identifier")
+                case "AllocateStack":
+                    expect(child.ident[0] == "Imm")
+                case ("Identifier", _) | ("Imm", _) | ("Register", _) | ("Stack", _) | "Ret" | "Not" | "Neg":
                     expect(child is None)
+                case _:
+                    raise ValueError(f"unexpected node {ident}")
 
         except AttributeError:
             raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
