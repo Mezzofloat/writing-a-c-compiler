@@ -4,3 +4,5 @@ mycc
 test_framework/*
 templates/*
 .github/*
+
+c_code/
