@@ -242,10 +242,33 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                     "dst": result_reg
                 })
 
+                load_zero_t6 = RISC_node("Load", {
+                    "src": RISC_node(("Imm", 0)),
+                    "dst": RISC_node(("Register", "t6"))
+                })
+
                 loop = create_uniq_ident()
 
                 ident_loop = RISC_node(("Identifier", loop))
                 end_loop = RISC_node(("Identifier", f"end{loop}"))
+
+                branch_if_neg = RISC_node("Branch", {
+                    "cond": RISC_node("Ge"),
+                    "src1": dividend_reg,
+                    "src2": RISC_node(("Register", "x0")),
+                    "branch": ident_loop
+                })
+
+                negate_dividend = RISC_node("Unary", {
+                    "op": RISC_node("Neg"),
+                    "src": dividend_reg,
+                    "dst": dividend_reg
+                })
+
+                checksum = RISC_node("Load", {
+                    "src": RISC_node(("Imm", 1)),
+                    "dst": RISC_node(("Register", "t6"))
+                })
 
                 branch = RISC_node("Branch", {
                     "cond": RISC_node("Lt"),
@@ -275,12 +298,30 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                     "branch": ident_loop
                 })
 
+                skip_negate = RISC_node(("Identifier", create_uniq_ident()))
+
+                branch_if_checksum = RISC_node("Branch", {
+                    "cond": RISC_node("Eq"),
+                    "src1": RISC_node(("Register", "x0")),
+                    "src2": RISC_node(("Register", "t6")),
+                    "branch": skip_negate
+                })
+
+                negate_result = RISC_node("Unary", {
+                    "op": RISC_node("Neg"),
+                    "src": dividend_reg,
+                    "dst": dividend_reg
+                })
+
                 store_back = RISC_node("Store", {
                     "src": dividend_reg,
                     "dst": attack_to_risc_ast(node.child["dst"])
                 })
 
-                return [load_dividend, load_divisor, load_zero, ident_loop, branch, sub_dividend, add_to_result, jump_loop, end_loop, store_back]
+                return [load_dividend, load_divisor, load_zero, load_zero_t6, branch_if_neg,
+                        negate_dividend, checksum, ident_loop,
+                        branch, sub_dividend, add_to_result, jump_loop,
+                        end_loop, branch_if_checksum, negate_result, skip_negate, store_back]
 
             else: 
                 bin = RISC_node("Binary", {
