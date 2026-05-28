@@ -5,4 +5,10 @@ test_framework/*
 templates/*
 .github/*
 
-c_code/
+# remove tests from git repo, for more see README
+tests/
+test_compiler
+gen_from_templates.py
+generate_expected_results.py
+test_properties.json
+expected_results.json
