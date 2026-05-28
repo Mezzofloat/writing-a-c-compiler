@@ -25,14 +25,12 @@ args = argparser.parse_args()
 if len(args.path) < 1 or not args.path.endswith('.c'):
     exit(1)
 
-
 preprocessed = args.path[:-2] + '.i'
 assembly = args.path[:-2] + '.s'
 executable = args.path[:-2]
 
 # preprocess source file
 os.system(f"gcc -E -P {args.path} -o {preprocessed}")
-#print("\nCommand prompt executed\n")
 
 if not os.path.exists(preprocessed):
     raise RuntimeError("File is unavailable")
@@ -42,26 +40,24 @@ with open(preprocessed, 'r') as file:
 
 # lex path.i
 tokens = lex(file_contents)
-        
-#print(tokens)
 
 if args.lex:
+    print(tokens)
     print('stopping at lex')
     exit(0)
 
 # parse tokens[]
-
 C_ast = parse_program(tokens)
-print("C_ast:")
+print("\nC_ast:")
 print(C_ast)
 
 if args.parse:
     print('stopping at parse')
     exit(0)
 
-#exp_to_attack(C_ast.child.child["body"])
+# convert the C AST generated earlier to an ATTACK AST
 ATTACK_ast = c_to_attack(C_ast)
-print("ATTACK_ast:")
+print("\nATTACK_ast:")
 print(ATTACK_ast)
 
 # --tacky is required by the books' tests i'm using
@@ -89,7 +85,7 @@ else:
 
     emit_code = x86_emitter.emit_x86
 
-# generate assembly ast based on whether it's for risc-v or x86
+# generate and fix assembly ast based on whether it's for risc-v or x86
 Assembly_ast = convert(ATTACK_ast)
 print("First Assembly_ast:")
 print(Assembly_ast)
@@ -106,8 +102,7 @@ if args.codegen:
     print('stopping at codegen')
     exit(0)
 
-# emit the code for each node in the tree
-
+# emit the assembly code for each node in the tree
 with open(assembly, "w") as f:
     print(emit_code(Assembly_ast), file=f)
 
