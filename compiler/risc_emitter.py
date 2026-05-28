@@ -11,12 +11,9 @@ def emit_risc(node: RISC_node) -> str:
             s = f".globl {name}\n{name}:\n"
 
             insts = node.child["instructions"]
-
             s += emit_risc(insts)
 
             return s
-        case ("Identifier", ident):
-            return ident
         case "Instructions":
             s = ""
 
@@ -35,46 +32,25 @@ def emit_risc(node: RISC_node) -> str:
 
             return s
         case "Load":
-            if node.child["src"].ident[0] == "Imm" and node.child["dst"].ident[0] == "Stack":
-                return ''
             if node.child["src"].ident[0] == "Imm":
-                #print(node)
-                num = node.child["src"].ident[1]
-                reg = node.child["dst"].ident[1]
+                num = emit_risc(node.child["src"])
+                reg = emit_risc(node.child["dst"])
                 s = f"li {reg}, {num}"
             else:
                 stack = emit_risc(node.child["src"])
-                reg = node.child["dst"].ident[1]
+                reg = emit_risc(node.child["dst"])
                 s = f"lw {reg}, {stack}"
 
             return s
         case "Store":
             return f"sw {emit_risc(node.child["src"])}, {emit_risc(node.child["dst"])}"
-        case ("Imm", imm):
-            return str(imm)
         case "Binary":
-            op = node.child["op"]
+            i = 'i' if node.child["src2"].ident[0] == "Imm" else ''
+            s = emit_risc(node.child["op"]) + i + ' '
 
-            if op.ident == "Sub" and node.child["src2"].ident[0] == "Imm":
-                #print("addi comes from sub imm")
-                dst = emit_risc(node.child["dst"])
-                src1 = emit_risc(node.child["src1"])
-                imm = f"-{node.child["src2"].ident[1]}"
-
-                s = f"addi {dst}, {src1}, {imm}"
-            else:
-                #print("addi comes from add imm")
-                i = 'i' if node.child["src2"].ident[0] == "Imm" else ''
-                s = emit_risc(node.child["op"]) + i + ' '
-
-                s += emit_risc(node.child["dst"]) + ', '
-
-                if node.child["op"].ident == "Sub":
-                    s += emit_risc(node.child["src1"]) + ', '
-                    s += emit_risc(node.child["src2"])
-                else:
-                    s += emit_risc(node.child["src1"]) + ', '
-                    s += emit_risc(node.child["src2"])
+            s += emit_risc(node.child["dst"]) + ', '
+            s += emit_risc(node.child["src1"]) + ', '
+            s += emit_risc(node.child["src2"])
 
             return s
         case "Unary":
@@ -83,10 +59,21 @@ def emit_risc(node: RISC_node) -> str:
             s += emit_risc(node.child["src"])
 
             return s
+        case "Branch":
+            s = 'b' + emit_risc(node.child["cond"]) + ' '
+            s += emit_risc(node.child["src1"]) + ', '
+            s += emit_risc(node.child["src2"]) + ', '
+            s += emit_risc(node.child["branch"])
+
+            return s
         case ("Stack", adr):
             return f"{adr}(sp)"
         case ("Register", reg):
             return reg
+        case ("Identifier", ident):
+            return ident
+        case ("Imm", imm):
+            return str(imm)
         case "AllocateStack":
             return f"addi sp, sp, -{node.child.ident[1]}"
         case "Ret":
@@ -99,15 +86,9 @@ def emit_risc(node: RISC_node) -> str:
             return "add"
         case "Sub":
             return "sub"
-        case "Branch":
-            s = 'b' + emit_risc(node.child["cond"]) + ' '
-            s += emit_risc(node.child["src1"]) + ', '
-            s += emit_risc(node.child["src2"]) + ', '
-            s += emit_risc(node.child["branch"])
-
-            return s
         case "Eq":
             return "eq"
         case "Lt":
             return "lt"
-        case "Ge": return "ge"
+        case "Ge":
+            return "ge"

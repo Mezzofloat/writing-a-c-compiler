@@ -3,7 +3,8 @@ from ASTNode import C_node
 token_idx = 0
 tokens = []
 
-# For both C and Assembly, a node with multiple args will use a dict, so an arg with a list (such as instructions) is free to use lists as needed
+# For C, ATTACK, and both Assemblies, a node with multiple args will use a dict,
+# so an arg with a list (such as instructions) is free to use lists as needed
 
 def expect(keyword: str):
     global token_idx

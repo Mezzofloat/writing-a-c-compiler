@@ -1,6 +1,6 @@
-from ASTNode import Assembly_node
+from ASTNode import x86_node
 
-def emit_x86(node: Assembly_node) -> str:
+def emit_x86(node: x86_node) -> str:
     match node.ident:
         case ("Identifier", ident):
             return ident

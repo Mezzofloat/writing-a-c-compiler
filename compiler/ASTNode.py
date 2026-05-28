@@ -282,7 +282,7 @@ Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend):
     -
 """
 
-class Assembly_node(ASTNode):
+class x86_node(ASTNode):
     def __init__(self, ident, child=None):
         super().__init__(ident)
         
@@ -291,7 +291,7 @@ class Assembly_node(ASTNode):
 
             def expect(*args):
                 if len(args) == 1:
-                    if type(args[0]) is not list or type(child) is not Assembly_node:
+                    if type(args[0]) is not list or type(child) is not x86_node:
                         raise TypeError(f"Error in function call of expect({args})")
                     
                     ls = args[0]

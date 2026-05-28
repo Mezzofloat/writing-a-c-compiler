@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
+import argparse
+import os
+
+from lexer import lex
+from parser import parse_program
+from attack_code_generator import c_to_attack
 
 import risc_converter
-import x86_converter
 import risc_emitter
+import x86_converter
 import x86_emitter
-from attack_code_generator import c_to_attack
-from parser import parse_program
-from lexer import lex
-import argparse
-import sys
-import os
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument('path', help="Path to the file to compile")
