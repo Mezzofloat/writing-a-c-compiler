@@ -1,5 +1,3 @@
-from enum import Enum
-
 class ASTNode:
     def __init__(self, ident, child=None):
         self.ident = ident
@@ -97,7 +95,7 @@ class C_node(ASTNode):
                         raise AssertionError(f"Error in asserting grammar on {self}")
                 elif len(args) == 2:
                     if args[0] == LIST:
-                        for entry in child:
+                        for entry in child: # type: ignore
                             if entry.ident not in args[1]:
                                 raise AssertionError(f"Error in asserting grammar on {self}")
                             
@@ -193,7 +191,7 @@ class ATTACK_node(ASTNode):
                         raise AssertionError(f"Error in asserting grammar on {self}")
                 elif len(args) == 2:
                     if args[0] == LIST:
-                        for entry in child:
+                        for entry in child: # type: ignore
                             if entry.ident not in args[1]:
                                 raise AssertionError(f"Error in asserting grammar on {self}")
                             
@@ -302,7 +300,7 @@ class Assembly_node(ASTNode):
                         raise AssertionError(f"Error in asserting grammar on {self}")
                 elif len(args) == 2:
                     if args[0] == LIST:
-                        for entry in child:
+                        for entry in child: # type: ignore
                             if entry.ident not in args[1]:
                                 raise AssertionError(f"Error in asserting grammar on {self}")
                             
@@ -421,7 +419,7 @@ class RISC_node(ASTNode):
                         raise AssertionError(f"Error in asserting grammar on {self}")
                 elif len(args) == 2:
                     if args[0] == LIST:
-                        for entry in child:
+                        for entry in child: # type: ignore
                             if entry.ident not in args[1] and entry.ident[0] not in args[1]:
                                 raise AssertionError(f"Error in asserting grammar on {self}")
                             
