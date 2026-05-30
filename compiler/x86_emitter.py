@@ -6,6 +6,36 @@ def emit_x86(node: x86_node) -> str:
             return ident
         case ("Stack", stack_amount):
             return f"{stack_amount}(%rbp)"
+        case "Cmp":
+            l = node.child["left"]
+            r = node.child["right"]
+
+            return f"cmpl\t{emit_x86(l)}, {emit_x86(r)}"
+        case "Jmp":
+            return f"jmp\t{emit_x86(node.child)}"
+        case "JmpCC":
+            cond_code = emit_x86(node.child["cond"])
+            label = emit_x86(node.child["label"])
+
+            return f"j{cond_code}\t{label}"
+        case "E" | 'NE' | 'L' | 'LE' | 'G' | 'GE':
+            return node.ident.lower()
+        case "SetCC":
+            cond_code = emit_x86(node.child["cond"])
+            dst4 = emit_x86(node.child["dst"])
+
+            dst = dst4
+            match dst4:
+                case "%eax":
+                    dst = "%al"
+                case "%edx":
+                    dst = "%dl"
+                case "%r10d":
+                    dst = "%r10b"
+                case "%r11d":
+                    dst = "%r11b"
+            
+            return f"set{cond_code}\t{dst}"
         case "Unary":
             op = node.child["op"]
             dst = node.child["dst"]
@@ -39,7 +69,10 @@ def emit_x86(node: x86_node) -> str:
         case "Instructions":
             s = ""
             for inst in node.child:
-                s += "\t" + emit_x86(inst) + "\n"
+                if inst.ident[0] == "Identifier":
+                    s += inst.ident[1] + ':\n'
+                else:
+                    s += "\t" + emit_x86(inst) + "\n"
             return s
         case "Mov":
             s = f"movl\t{emit_x86(node.child["src"])}, {emit_x86(node.child["dst"])}"

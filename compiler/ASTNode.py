@@ -69,10 +69,12 @@ Unary:
     op: unary operator that acts on the inner expression (Complement | Negate)
     inner_exp: the expression that is being acted on (Constant | Unary | Binary)
 Binary:
-    op: binary operator that acts on the left and right operands (Add | Sub | Multiply | Divide | Modulus)
+    op: binary operator that acts on the left and right operands (Add | Sub | Multiply | Divide | Modulus
+                                                                | And | Or | Equal | NotEqual | LessThan
+                                                                | LessOrEqual | GreaterThan | GreaterOrEqual)
     left: left operand (Constant | Unary | Binary)
     right: right operand (Constant | Unary | Binary)
-Complement, Negate, Add, Sub, Multiply, Divide, Modulus:
+Complement, Negate, Add, Sub, Multiply, Divide, Modulus, And, Or, etc.:
     -
 """
 
@@ -124,13 +126,15 @@ class C_node(ASTNode):
                 case "Return":
                     expect(['Constant', 'Unary', 'Binary'])
                 case "Unary":
-                    expect("op", ["Complement", "Negate"])
+                    expect("op", ["Complement", "Negate", 'Not'])
                     expect("inner_exp", ["Constant", "Unary", "Binary"])
                 case "Binary":
-                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
+                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus', 'And', 'Or', 'LessThan', 'GreaterThan', 'Equal', 'NotEqual', 'LessOrEqual', 'GreaterOrEqual'])
                     expect("left", ["Constant", "Unary", "Binary"])
                     expect("right", ["Constant", "Unary", "Binary"])
                 case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
+                    expect()
+                case "And" | "Or" | "Not" | "Equal" | "NotEqual" | "LessThan" | "GreaterThan" | "LessOrEqual" | "GreaterOrEqual":
                     expect()
                 case _:
                     raise ValueError(f"unexpected node {ident}")
@@ -153,14 +157,14 @@ Function:
     name: name of the function (Identifier)
     instructions: list of instructions (Instructions)
 Instructions:
-    list of ATTACK instructions (Binary | Unary | Return)
+    list of ATTACK instructions (Binary | Unary | Return | Jump | JumpIfZero | JumpIfNotZero | Identifier)
 Binary:
-    op: operation (Add | Sub | Multiply | Divide | Modulus)
+    op: operation (Add | Sub | Multiply | Divide | Modulus | Equal | NotEqual | LessThan | LessOrEqual | GreaterThan | GreaterOrEqual)
     src1: left operand (Constant | Variable)
     src2: right operand (Constant | Variable)
     dst: destination of operation (Variable)
 Unary:
-    op: operation (Complement | Negate)
+    op: operation (Complement | Negate | Copy)
     src: operand (Constant | Variable)
     dst: destination of operation (Variable)
 Constant:
@@ -169,7 +173,12 @@ Variable:
     temporary name for this variable (Identifier)
 Return:
     expression being returned (Constant | Variable | Unary | Binary)
-Complement, Negate, Add, Sub, Multiply, Divide, Modulus:
+Jump:
+    label to jump to (Identifier)
+JumpIfZero, JumpIfNotZero:
+    condition to compare to zero (Constant | Variable)
+    label to jump to (Identifier)
+Complement, Negate, Add, Sub, Multiply, Divide, Modulus, Copy:
     -
 """
 
@@ -218,21 +227,28 @@ class ATTACK_node(ASTNode):
                     expect("name", ["Identifier"])
                     expect("instructions", ["Instructions"])
                 case "Instructions":
-                    expect(LIST, ['Binary', 'Unary', 'Return'])
+                    expect(LIST, ['Binary', 'Unary', 'Return', 'Jump', 'JumpIfZero', 'JumpIfNotZero'])
                 case "Return":
                     expect(['Unary', 'Binary', 'Variable', 'Constant'])
                 case "Unary":
-                    expect("op", ["Complement", "Negate"])
+                    expect("op", ["Complement", "Negate", 'Not', 'Copy'])
                     expect("src", ["Variable", "Constant"])
                     expect("dst", ["Variable"])
                 case "Binary":
-                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus'])
+                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus', 'Equal', 'NotEqual', 'LessThan', 'LessOrEqual', 'GreaterThan', 'GreaterOrEqual'])
                     expect("src1", ["Variable", "Constant"])
                     expect("src2", ["Variable", "Constant"])
                     expect("dst", ["Variable"])
                 case "Variable":
                     expect(["Identifier"])
+                case "Jump":
+                    expect(['Identifier'])
+                case "JumpIfZero" | "JumpIfNotZero":
+                    expect("cond", ['Variable', 'Constant'])
+                    expect("label", ['Identifier'])
                 case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
+                    expect()
+                case "Copy" | "Not" | "LessThan" | "LessOrEqual" | "GreaterThan" | "GreaterOrEqual" | "Equal" | "NotEqual":
                     expect()
                 case _:
                     raise ValueError(f"unexpected node {ident}")
@@ -246,7 +262,7 @@ class ATTACK_node(ASTNode):
             self.child = child
 
 """
-Definitions for the types of Assembly nodes:
+Definitions for the types of x86 nodes:
 Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
 
 Program:
@@ -257,7 +273,7 @@ Function:
 Identifier:
     [name for the node with this as a child (String)]
 Instructions:
-    list of assembly instructions (Binary | Unary | Mov | Sext | Ret)
+    list of assembly instructions (Binary | Unary | Mov | Sext | Ret | Cmp | Jmp | JmpCC | SetCC | Identifier)
 Binary:
     op: binary operation being applied to destination (Add | Sub | Mult)
     src: left operand (Stack | Register | Imm)
@@ -278,7 +294,18 @@ Register:
     [register that the node with this as a child is referring to (String)]
 Imm:
     [value for the node with this as a child (Int)]
-Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend):
+Cmp:
+    left: left comparand (Imm, Register, Pseudo, Stack)
+    right: right comparand (Imm, Register, Pseudo, Stack)
+Jmp:
+    label to jump to (Identifier)
+JmpCC:
+    cond: condition to jump if (E | NE | G | GE | L | LE)
+    label: label to jump to (Identifier)
+SetCC:
+    cond: condition to set byte to (E | NE | G | GE | L | LE)
+    dst: byte to set (Register)
+Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend), E, NE, G, GE, L, LE:
     -
 """
 
@@ -288,6 +315,7 @@ class x86_node(ASTNode):
         
         try:
             LIST = 0
+            VALUE = ['Imm', 'Pseudo', 'Stack', 'Register']
 
             def expect(*args):
                 if len(args) == 1:
@@ -301,7 +329,7 @@ class x86_node(ASTNode):
                 elif len(args) == 2:
                     if args[0] == LIST:
                         for entry in child: # type: ignore
-                            if entry.ident not in args[1]:
+                            if entry.ident not in args[1] and entry.ident[0] not in args[1]:
                                 raise AssertionError(f"Error in asserting grammar on {self}")
                             
                         return
@@ -327,7 +355,7 @@ class x86_node(ASTNode):
                     expect("name", ["Identifier"])
                     expect("instructions", ["Instructions"])
                 case "Instructions":
-                    expect(LIST, ['Binary', 'Unary', 'Mov', 'Sext', 'Ret'])
+                    expect(LIST, ['Binary', 'Unary', 'Mov', 'Sext', 'Ret', 'Cmp', 'Jmp', 'JmpCC', 'SetCC', 'Identifier'])
                 case "Unary":
                     expect("op", ["Not", "Neg", "Div"])
                     expect("dst", ['Pseudo', 'Stack','Register','Imm'])
@@ -335,6 +363,17 @@ class x86_node(ASTNode):
                     expect("op", ['Add', 'Sub', 'Mult'])
                     expect("src", ['Pseudo', 'Stack', 'Register', 'Imm'])
                     expect("dst", ['Pseudo', 'Stack', 'Register'])
+                case "Cmp":
+                    expect("left", VALUE)
+                    expect("right", VALUE)
+                case "Jmp":
+                    expect(['Identifier'])
+                case "JmpCC":
+                    expect("cond", ['E', 'NE', 'G', 'GE', 'L', 'LE'])
+                    expect("label", ['Identifier'])
+                case "SetCC":
+                    expect("cond", ['E', 'NE', 'G', 'GE', 'L', 'LE'])
+                    expect("dst", VALUE)
                 case "Mov":
                     expect("src", ['Pseudo', 'Stack', 'Register', 'Imm'])
                     expect("dst", ['Pseudo', 'Stack', 'Register'])
@@ -342,7 +381,7 @@ class x86_node(ASTNode):
                     expect(["Imm"])
                 case "Pseudo":
                     expect(["Identifier"])
-                case "Not" | "Neg" | "Add" | "Sub" | "Mult" | "Div" | ("Identifier", _) | ("Imm", _) | ("Stack", _) | ("Register", _) | "Ret" | "Sext":
+                case "Not" | "Neg" | "Add" | "Sub" | "Mult" | "Div" | ("Identifier", _) | ("Imm", _) | ("Stack", _) | ("Register", _) | "Ret" | "Sext" | "E" | "NE" | 'G' | 'GE' | 'L' | 'LE':
                     expect()
                 case _:
                     raise ValueError(f"unexpected node {ident}")

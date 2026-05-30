@@ -107,4 +107,4 @@ with open(assembly, "w") as f:
     print(emit_code(Assembly_ast), file=f)
 
 # assemble and link
-os.system(f"{prefix}gcc {assembly} -o {executable}")
+os.system(f"{prefix}gcc {assembly} -o {executable} -g -Og")

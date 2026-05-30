@@ -7,7 +7,14 @@ tmp_var_idx = 0
 def make_tmp():
     global tmp_var_idx
 
-    s = str(tmp_var_idx) + ".tmp"
+    s = '.Ltmp.' + str(tmp_var_idx)
+    tmp_var_idx += 1
+    return s
+
+def make_branch_label():
+    global tmp_var_idx
+
+    s = '.Lbrn.' + str(tmp_var_idx)
     tmp_var_idx += 1
     return s
 
@@ -38,23 +45,75 @@ def exp_to_attack(exp_node : C_node, instruc):
             return dst
         case "Binary":
             op = exp_to_attack(exp_node.child["op"], instruc)
-            left = exp_to_attack(exp_node.child["left"], instruc)
-            right = exp_to_attack(exp_node.child["right"], instruc)
 
-            dst_ident = ATTACK_node(("Identifier", make_tmp()))
-            dst = ATTACK_node("Variable", dst_ident)
+            if not op: # op is && or ||
+                if exp_node.child["op"].ident == "And":
+                    condition = "JumpIfZero"
+                    calc_result = 1
+                elif exp_node.child["op"].ident == "Or":
+                    condition = "JumpIfNotZero"
+                    calc_result = 0
+                else:
+                    raise ValueError("Invalid operation that returned null")
 
-            bin = ATTACK_node("Binary", {
-                "op": op,
-                "src1": left,
-                "src2": right,
-                "dst": dst
-            })
+                left = exp_to_attack(exp_node.child["left"], instruc)
 
-            instruc.append(bin)
-            return dst
-        case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Constant", _):
+                false_label = ATTACK_node(("Identifier", make_branch_label()))
+                check_left = ATTACK_node(condition, {
+                    "cond": left,
+                    "label": false_label
+                })
+                instruc.append(check_left)
+
+                right = exp_to_attack(exp_node.child["right"], instruc)
+
+                check_right = ATTACK_node(condition, {
+                    "cond": right,
+                    "label": false_label
+                })
+
+                dst_ident = ATTACK_node(("Identifier", make_tmp()))
+                dst = ATTACK_node("Variable", dst_ident)
+
+                result_calculated = ATTACK_node("Unary", {
+                    "op": ATTACK_node("Copy"),
+                    "src": ATTACK_node(("Constant", calc_result)),
+                    "dst": dst
+                })
+
+                end_label = ATTACK_node(("Identifier", make_branch_label()))
+
+                jump_to_end = ATTACK_node("Jump", end_label)
+
+                result_shorted = ATTACK_node("Unary", {
+                    "op": ATTACK_node("Copy"),
+                    "src": ATTACK_node(("Constant", 1-calc_result)),
+                    "dst": dst
+                })
+
+                instruc.extend([check_right, result_calculated, jump_to_end, false_label, result_shorted, end_label])
+
+                return dst
+            else:
+                left = exp_to_attack(exp_node.child["left"], instruc)
+                right = exp_to_attack(exp_node.child["right"], instruc)
+
+                dst_ident = ATTACK_node(("Identifier", make_tmp()))
+                dst = ATTACK_node("Variable", dst_ident)
+
+                bin = ATTACK_node("Binary", {
+                    "op": op,
+                    "src1": left,
+                    "src2": right,
+                    "dst": dst
+                })
+
+                instruc.append(bin)
+                return dst
+        case "Equal" | "NotEqual" | "LessThan" | "LessOrEqual" | "GreaterThan" | "GreaterOrEqual" | "Not" | "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Constant", _):
             return ATTACK_node(exp_node.ident)
+        case "And" | "Or" :
+            return None
         case _:
             raise ValueError(f"Given invalid expression node: {exp_node}")
 

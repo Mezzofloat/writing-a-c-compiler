@@ -63,7 +63,7 @@ def parse_factor() -> C_node:
 
     if type(next) is tuple and next[0] == "Constant":
         return parse_int()
-    elif next == "~" or next == "-":
+    elif next == "~" or next == "-" or next == "!":
         operator = parse_unop()
         inner_exp = parse_factor()
 
@@ -82,11 +82,19 @@ def parse_factor() -> C_node:
     raise SyntaxError(f"Expected expression but got {tokens[token_idx]}")
 
 bin_precedence = {
-    "*": 1,
-    "/": 1,
-    "%": 1,
-    "+": 0,
-    "-": 0
+    "*": 100,
+    "/": 100,
+    "%": 100,
+    "+": 90,
+    "-": 90,
+    "<": 70,
+    "<=": 70,
+    ">": 70,
+    ">=": 70,
+    "==": 60,
+    "!=": 60,
+    "&&": 20,
+    "||": 10
 }
 
 def parse_exp(min_prec: int) -> C_node:
@@ -94,7 +102,7 @@ def parse_exp(min_prec: int) -> C_node:
     next = tokens[token_idx]
     while next in bin_precedence and bin_precedence[next] >= min_prec:
         operator = parse_binop()
-        right = parse_exp(bin_precedence[next] + 1)
+        right = parse_exp(bin_precedence[next] + 10)
 
         new = C_node("Binary", {
             "op": operator,
@@ -118,6 +126,8 @@ def parse_unop() -> C_node:
             return C_node("Complement")
         case "-":
             return C_node("Negate")
+        case "!":
+            return C_node("Not")
     
     raise SyntaxError(f"Expected unary operator but got {next}")
 
@@ -138,6 +148,22 @@ def parse_binop() -> C_node:
             return C_node("Divide")
         case "%":
             return C_node("Modulus")
+        case "&&":
+            return C_node("And")
+        case "||":
+            return C_node("Or")
+        case "==":
+            return C_node("Equal")
+        case "!=":
+            return C_node("NotEqual")
+        case "<":
+            return C_node("LessThan")
+        case "<=":
+            return C_node("LessOrEqual")
+        case ">":
+            return C_node("GreaterThan")
+        case ">=":
+            return C_node("GreaterOrEqual")
         
     raise SyntaxError(f"Expected binary operator but got {next}")
 

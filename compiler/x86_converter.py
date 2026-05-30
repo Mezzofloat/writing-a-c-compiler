@@ -7,6 +7,42 @@ allocate_offset = 0
 def attack_to_x86_ast(node: ATTACK_node) -> x86_node:
     match node.ident:
         case "Binary":
+            match node.child["op"].ident:
+                case 'Equal':
+                    opcode = 'E'
+                case 'NotEqual':
+                    opcode = 'NE'
+                case 'GreaterThan':
+                    opcode = 'G'
+                case 'GreaterOrEqual':
+                    opcode = 'GE'
+                case 'LessThan':
+                    opcode = 'L'
+                case 'LessOrEqual':
+                    opcode = 'LE'
+                case _:
+                    opcode = None
+
+            if opcode:
+                cmp = x86_node("Cmp", {
+                    "left": attack_to_x86_ast(node.child["src2"]),
+                    "right": attack_to_x86_ast(node.child["src1"])
+                })
+
+                dst = attack_to_x86_ast(node.child["dst"])
+
+                mov = x86_node("Mov", {
+                    "src": x86_node(("Imm", 0)),
+                    "dst": dst
+                })
+
+                setcc = x86_node("SetCC", {
+                    "cond": x86_node(opcode),
+                    "dst": dst
+                })
+
+                return [cmp, mov, setcc]
+            
             if node.child["op"].ident == "Divide":
                 src1 = attack_to_x86_ast(node.child["src1"])
                 src2 = attack_to_x86_ast(node.child["src2"])
@@ -101,17 +137,42 @@ def attack_to_x86_ast(node: ATTACK_node) -> x86_node:
         case "Multiply":
             return x86_node("Mult")
         case "Unary":
-            mov = x86_node("Mov", {
-                "src": attack_to_x86_ast(node.child["src"]),
-                "dst": attack_to_x86_ast(node.child["dst"])
-            })
+            if node.child["op"].ident == "Not":
+                cmp = x86_node("Cmp", {
+                    "left": x86_node(("Imm", 0)),
+                    "right": attack_to_x86_ast(node.child["src"])
+                })
 
-            operate = x86_node("Unary", {
-                "op": attack_to_x86_ast(node.child["op"]),
-                "dst": attack_to_x86_ast(node.child["dst"])
-            })
+                dst = attack_to_x86_ast(node.child["dst"])
 
-            return [mov, operate]
+                mov = x86_node("Mov", {
+                    "src": x86_node(("Imm", 0)),
+                    "dst": dst
+                })
+
+                setcc = x86_node("SetCC", {
+                    "cond": x86_node('E'),
+                    "dst": dst
+                })
+
+                return [cmp, mov, setcc]
+            elif node.child["op"].ident == "Copy":
+                return x86_node("Mov", {
+                    "src": attack_to_x86_ast(node.child["src"]),
+                    "dst": attack_to_x86_ast(node.child["dst"])
+                })
+            else:
+                mov = x86_node("Mov", {
+                    "src": attack_to_x86_ast(node.child["src"]),
+                    "dst": attack_to_x86_ast(node.child["dst"])
+                })
+
+                operate = x86_node("Unary", {
+                    "op": attack_to_x86_ast(node.child["op"]),
+                    "dst": attack_to_x86_ast(node.child["dst"])
+                })
+
+                return [mov, operate]
         case "Return":
             val = attack_to_x86_ast(node.child)
 
@@ -132,6 +193,34 @@ def attack_to_x86_ast(node: ATTACK_node) -> x86_node:
             })
 
             return func
+        case "JumpIfZero":
+            cmp = x86_node("Cmp", {
+                "left": x86_node(("Imm", 0)),
+                "right": attack_to_x86_ast(node.child["cond"])
+            })
+
+            jmpcc = x86_node("JmpCC", {
+                "cond": x86_node('E'),
+                "label": attack_to_x86_ast(node.child["label"])
+            })
+
+            return [cmp, jmpcc]
+        case "JumpIfNotZero":
+            cmp = x86_node("Cmp", {
+                "left": x86_node(("Imm", 0)),
+                "right": attack_to_x86_ast(node.child["cond"])
+            })
+
+            jmpcc = x86_node("JmpCC", {
+                "cond": x86_node('NE'),
+                "label": attack_to_x86_ast(node.child["label"])
+            })
+
+            return [cmp, jmpcc]
+        case "Jump":
+            return x86_node("Jmp", attack_to_x86_ast(node.child))
+        case "Copy":
+            pass
         case _:
             if node.child:
                 if type(node.child) is ATTACK_node:
@@ -170,6 +259,29 @@ def replace_pseudo(instructions: list[x86_node]):
 
     for instr in instructions:
         if instr.child and type(instr.child) is dict:
+            # consider the cmp
+            if "left" in instr.child and instr.child["left"].ident == "Pseudo":
+                pseudo_ident = instr.child["left"].child.ident[1]
+
+                if pseudo_ident not in mappings:
+                    offset += 4
+                    mappings[pseudo_ident] = f"-{offset}"
+
+                reg = x86_node(("Stack", mappings[pseudo_ident]))
+
+                instr.child["left"] = reg
+            
+            if "right" in instr.child and instr.child["right"].ident == "Pseudo":
+                pseudo_ident = instr.child["right"].child.ident[1]
+
+                if pseudo_ident not in mappings:
+                    offset += 4
+                    mappings[pseudo_ident] = f"-{offset}"
+
+                reg = x86_node(("Stack", mappings[pseudo_ident]))
+
+                instr.child["right"] = reg
+
             # consider the binaries
             if "src1" in instr.child and instr.child["src1"].ident == "Pseudo":
                 pseudo_ident = instr.child["src1"].child.ident[1]
@@ -306,4 +418,37 @@ def fix(instructions: list[x86_node]):
 
                     instructions[i] = instr1
                     instructions.insert(i+1, instr2)
+            elif instr.ident == "Cmp":
+                scratch_reg_left = x86_node(("Register", "%r10d"))
+                scratch_reg_right = x86_node(("Register", "%r11d"))
+
+                newops = []
+
+                if instr.child["left"].ident[0] == "Stack":
+                    movl = x86_node("Mov", {
+                        "src": instr.child["left"],
+                        "dst": scratch_reg_left
+                    })
+                    left = scratch_reg_left
+                    newops.append(movl)
+                else:
+                    left = instr.child["left"]
+
+                if instr.child["right"].ident[0] == "Imm":
+                    movr = x86_node("Mov", {
+                        "src": instr.child["right"],
+                        "dst": scratch_reg_right
+                    })
+                    right = scratch_reg_right
+                    newops.append(movr)
+                else:
+                    right = instr.child["right"]
+
+                cmpl = x86_node("Cmp", {
+                    "left": left,
+                    "right": right
+                })
+
+                instructions[i] = cmpl
+                instructions[i:i] = newops
         i += 1
