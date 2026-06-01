@@ -597,266 +597,72 @@ def fix(instructions: list[RISC_node]):
     while i < len(instructions):
         instr = instructions[i]
         print(instr)
-
-        if instr.ident == "Binary":
-            op = instr.child["op"]
-            src1 = instr.child["src1"]
-            src2 = instr.child["src2"]
-            dst = instr.child["dst"]
-
-            src1_reg = RISC_node(("Register", "t3"))
-            src2_reg = RISC_node(("Register", "t4"))
-            dst_reg = RISC_node(("Register", "t5"))
-
-            corrected_bin = []
-
-            if src1.ident[0] == "Imm" or src1.ident[0] == "Stack":
-                load_src1 = RISC_node("Load", {
-                    "src": src1,
-                    "dst": src1_reg
-                })
-                left = src1_reg
-
-                corrected_bin.append(load_src1)
-            else:
-                left = src1
-
-            if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
-                load_src2 = RISC_node("Load", {
-                    "src": src2,
-                    "dst": src2_reg
-                })
-                right = src2_reg
-                corrected_bin.append(load_src2)
-            else:
-                right = src2
-
-            if dst.ident[0] == "Imm" or dst.ident[0] == "Stack":
-                store_dst = RISC_node("Store", {
-                    "src": dst_reg,
-                    "dst": dst
-                })
-                result = dst_reg
-            else:
-                store_dst = None
-                result = dst
-
-            instructions[i] = RISC_node("Binary", {
-                "op": op,
-                "src1": left,
-                "src2": right,
-                "dst": result
-            })
-
-            if store_dst is not None:
-                instructions.insert(i+1, store_dst)
-
-            instructions[i:i] = corrected_bin
         
-        if instr.ident == "Branch":
+        if type(instr.child) is not dict:
+            i += 1
+            continue
+
+        keep_away = ['Load', 'Store']
+
+        if instr.ident in keep_away:
+            i += 1
+            continue
+
+        rs1_scratch = RISC_node(("Register", "t3"))
+        operand_scratch = rs1_scratch
+        rs2_scratch = RISC_node(("Register", "t4"))
+        dst_scratch = RISC_node(("Register", "t5"))
+
+        if "src1" in instr.child:
             src1 = instr.child["src1"]
-            src2 = instr.child["src2"]
-
-            src1_reg = RISC_node(("Register", "t3"))
-            src2_reg = RISC_node(("Register", "t4"))
-
-            corrected_branch = []
-
             if src1.ident[0] == "Imm" or src1.ident[0] == "Stack":
                 load_src1 = RISC_node("Load", {
                     "src": src1,
-                    "dst": src1_reg
+                    "dst": rs1_scratch
                 })
-                left = src1_reg
 
-                corrected_branch.append(load_src1)
-            else:
-                left = src1
+                instructions[i].child["src1"] = rs1_scratch
+                instructions.insert(i, load_src1)
+                i += 1
+                continue
 
-            if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
-                load_src2 = RISC_node("Load", {
-                    "src": src2,
-                    "dst": src2_reg
-                })
-                right = src2_reg
-                corrected_branch.append(load_src2)
-            else:
-                right = src2
-
-            instructions[i] = RISC_node("Branch", {
-                "cond": instr.child["cond"],
-                "src1": left,
-                "src2": right,
-                "branch": instr.child["branch"]
-            })
-
-            try:
-                if store_dst is not None:
-                    instructions.insert(i+1, store_dst)
-            except:
-                pass
-
-            instructions[i:i] = corrected_branch
-        
-        if instr.ident == "SetLessThanU":
-            t3 = RISC_node(("Register", "t3"))
-            t1 = RISC_node(("Register", "t1"))
-            t2 = RISC_node(("Register", "t2"))
-
-            src1 = instr.child["src1"]
+        if "src2" in instr.child:
             src2 = instr.child["src2"]
-            dst = instr.child["dst"]
-
-            src1_reg = t3
-            src2_reg = t1
-            dst_reg = t2
-
-            corrected_slt = []
-
-            if src1.ident[0] == "Imm" or src1.ident[0] == "Stack":
-                load_src1 = RISC_node("Load", {
-                    "src": src1,
-                    "dst": src1_reg
-                })
-                left = src1_reg
-
-                corrected_slt.append(load_src1)
-            else:
-                left = src1
-
             if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
                 load_src2 = RISC_node("Load", {
                     "src": src2,
-                    "dst": src2_reg
+                    "dst": rs2_scratch
                 })
-                right = src2_reg
-                corrected_slt.append(load_src2)
-            else:
-                right = src2
 
-            if dst.ident[0] == "Imm" or dst.ident[0] == "Stack":
-                store_dst = RISC_node("Store", {
-                    "src": dst_reg,
-                    "dst": dst
-                })
-                result = dst_reg
-            else:
-                store_dst = None
-                result = dst
+                instructions[i].child["src2"] = rs2_scratch
+                instructions.insert(i, load_src2)
+                i += 1
+                continue
 
-            instructions[i] = RISC_node("SetLessThanU", {
-                "src1": left,
-                "src2": right,
-                "dst": result
-            })
-
-            try:
-                if store_dst is not None:
-                    instructions.insert(i+1, store_dst)
-            except:
-                pass
-
-            instructions[i:i] = corrected_slt
-        if instr.ident == "SetLessThan":
-            t3 = RISC_node(("Register", "t3"))
-            t1 = RISC_node(("Register", "t1"))
-            t2 = RISC_node(("Register", "t2"))
-
-            src1 = instr.child["src1"]
-            src2 = instr.child["src2"]
-            dst = instr.child["dst"]
-
-            src1_reg = t3
-            src2_reg = t1
-            dst_reg = t2
-
-            corrected_slt = []
-
-            if src1.ident[0] == "Imm" or src1.ident[0] == "Stack":
-                load_src1 = RISC_node("Load", {
-                    "src": src1,
-                    "dst": src1_reg
-                })
-                left = src1_reg
-
-                corrected_slt.append(load_src1)
-            else:
-                left = src1
-
-            if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
-                load_src2 = RISC_node("Load", {
-                    "src": src2,
-                    "dst": src2_reg
-                })
-                right = src2_reg
-                corrected_slt.append(load_src2)
-            else:
-                right = src2
-
-            if dst.ident[0] == "Imm" or dst.ident[0] == "Stack":
-                store_dst = RISC_node("Store", {
-                    "src": dst_reg,
-                    "dst": dst
-                })
-                result = dst_reg
-            else:
-                store_dst = None
-                result = dst
-
-            instructions[i] = RISC_node("SetLessThan", {
-                "src1": left,
-                "src2": right,
-                "dst": result
-            })
-
-            try:
-                if store_dst is not None:
-                    instructions.insert(i+1, store_dst)
-            except:
-                pass
-
-            instructions[i:i] = corrected_slt
-
-        if instr.ident == "Unary":
-            t0 = RISC_node(("Register", "t0"))
-            t1 = RISC_node(("Register", "t1"))
-            
-            op = instr.child["op"]
+        if "src" in instr.child:
             src = instr.child["src"]
-            dst = instr.child["dst"]
-
-            corrected_un = []
-
-            if instr.child["src"].ident[0] == "Stack" or instr.child["src"].ident[0] == "Imm":
+            if instr.child["src"].ident[0] == "Stack" or src.ident[0] == "Imm":
                 load_src = RISC_node("Load", {
                     "src": src,
-                    "dst": t0
+                    "dst": operand_scratch
                 })
-                operand = t0
-
-                corrected_un.append(load_src)
-            else:
-                operand = src
-
-            if instr.child["dst"].ident[0] == "Stack":
-                store_dst = RISC_node("Store", {
-                    "src": t1,
-                    "dst": instr.child["dst"]
-                })
-                result = t1
-            else:
-                result = dst
-                store_dst = None
                 
-            instructions[i] = RISC_node("Unary", {
-                "op": op,
-                "src": operand,
-                "dst": result
-            })
+                instructions[i].child["src"] = operand_scratch
+                instructions.insert(i, load_src)
+                i += 1
+                continue
 
-            if store_dst is not None:
+        if "dst" in instr.child:
+            dst = instr.child["dst"]
+            if dst.ident[0] == "Stack":
+                store_dst = RISC_node("Store", {
+                    "src": dst_scratch,
+                    "dst": dst
+                })
+
+                instructions[i].child["dst"] = dst_scratch
                 instructions.insert(i+1, store_dst)
-
-            instructions[i:i] = corrected_un
+                i += 2
+                continue
         
         i += 1
