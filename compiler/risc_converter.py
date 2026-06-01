@@ -323,6 +323,102 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                         branch, sub_dividend, add_to_result, jump_loop,
                         end_loop, branch_if_checksum, negate_result, skip_negate, store_back]
 
+            diff = RISC_node(("Register", "a7"))
+            zero = RISC_node(("Register", "x0"))
+
+            dst = attack_to_risc_ast(node.child["dst"])
+
+            one = RISC_node(("Imm", 1))
+            reg_one = RISC_node(("Register", "t0"))
+            load_one = RISC_node("Load", {
+                "src": one,
+                "dst": reg_one
+            })
+            match op:
+                case 'Equal':
+                    opcode = 'Eq'
+
+                    setcond = RISC_node("SetLessThanU", {
+                        "src1": diff,
+                        "src2": reg_one,
+                        "dst": dst
+                    })
+                case 'NotEqual':
+                    opcode = 'Ne'
+
+                    setcond = RISC_node("SetLessThanU", {
+                        "src1": diff,
+                        "src2": reg_one,
+                        "dst": dst
+                    })
+
+                    xori = RISC_node("Binary", {
+                        "op": RISC_node("Xor"),
+                        "src1": dst,
+                        "src2": one,
+                        "dst": dst
+                    })
+                case 'GreaterThan':
+                    opcode = 'Gt'
+
+                    setcond = RISC_node("SetLessThan", {
+                        "src1": reg_one,
+                        "src2": diff,
+                        "dst": dst
+                    })
+                case 'GreaterOrEqual':
+                    opcode = 'Ge'
+
+                    setcond = RISC_node("SetLessThan", {
+                        "src1": diff,
+                        "src2": zero,
+                        "dst": dst
+                    })
+
+                    xori = RISC_node("Binary", {
+                        "op": RISC_node("Xor"),
+                        "src1": dst,
+                        "src2": one,
+                        "dst": dst
+                    })
+                case 'LessThan':
+                    opcode = 'Lt'
+                    
+                    setcond = RISC_node("SetLessThan", {
+                        "src1": diff,
+                        "src2": reg_one,
+                        "dst": dst
+                    })
+                case 'LessOrEqual':
+                    opcode = 'Le'
+
+                    setcond = RISC_node("SetLessThan", {
+                        "src1": zero,
+                        "src2": diff,
+                        "dst": dst
+                    })
+
+                    xori = RISC_node("Binary", {
+                        "op": RISC_node("Xor"),
+                        "src1": dst,
+                        "src2": one,
+                        "dst": dst
+                    })
+                case _:
+                    opcode = None
+
+            if opcode:
+                cmp = RISC_node("Binary", {
+                    "op": RISC_node("Sub"),
+                    "src1": attack_to_risc_ast(node.child["src1"]),
+                    "src2": attack_to_risc_ast(node.child["src2"]),
+                    "dst": diff
+                })
+
+                try:
+                    return [cmp, load_one, setcond, xori]
+                except NameError:
+                    return [cmp, load_one, setcond]
             else: 
                 bin = RISC_node("Binary", {
                     "op": attack_to_risc_ast(node.child["op"]),
@@ -334,18 +430,34 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                 return bin
 
         case "Unary":
-            un = RISC_node("Unary", {
-                "op": attack_to_risc_ast(node.child["op"]),
-                "src": attack_to_risc_ast(node.child["src"]),
-                "dst": attack_to_risc_ast(node.child["dst"])
-            })
+            if node.child["op"].ident == "Not":
+                load_one = RISC_node("Load", {
+                    "src": RISC_node(("Imm", 1)),
+                    "dst": RISC_node(("Register", "t0"))
+                })
+                
+                setless = RISC_node("SetLessThanU", {
+                    "src1": attack_to_risc_ast(node.child["src"]),
+                    "src2": RISC_node(("Register", "t0")),
+                    "dst": attack_to_risc_ast(node.child["dst"])
+                })
 
-            return un
+                return [load_one, setless]
+            else:
+                un = RISC_node("Unary", {
+                    "op": attack_to_risc_ast(node.child["op"]),
+                    "src": attack_to_risc_ast(node.child["src"]),
+                    "dst": attack_to_risc_ast(node.child["dst"])
+                })
+
+                return un
         
         case "Complement":
             return RISC_node("Not")
         case "Negate":
             return RISC_node("Neg")
+        case "Copy":
+            return RISC_node("Mov")
         case "Variable":
             return RISC_node("Pseudo", attack_to_risc_ast(node.child))
         case "Add" | "Sub":
@@ -356,6 +468,39 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
             pass
         case "Modulus":
             pass # roughly the same as Divide
+        case "JumpIfZero":
+            return RISC_node("Branch", {
+                "cond": RISC_node("Eq"),
+                "src1": RISC_node(("Register", "x0")),
+                "src2": attack_to_risc_ast(node.child["cond"]),
+                "branch": attack_to_risc_ast(node.child["label"])
+            })
+        case "JumpIfNotZero":
+            return RISC_node("Branch", {
+                "cond": RISC_node("Ne"),
+                "src1": RISC_node(("Register", "x0")),
+                "src2": attack_to_risc_ast(node.child["cond"]),
+                "branch": attack_to_risc_ast(node.child["label"])
+            })
+        case "Jump":
+            return RISC_node("Branch", {
+                "cond": RISC_node("Eq"),
+                "src1": RISC_node(("Register", "x0")),
+                "src2": RISC_node(("Register", "x0")),
+                "branch": attack_to_risc_ast(node.child)
+            })
+        case "Equal":
+            return RISC_node("Eq")
+        case "NotEqual":
+            return RISC_node("Ne")
+        case "GreaterThan":
+            return RISC_node("Gt")
+        case "GreaterOrEqual":
+            return RISC_node("Ge")
+        case "LessThan":
+            return RISC_node("Lt")
+        case "LessOrEqual":
+            return RISC_node("Le")
 
 
 def replace_pseudo_registers(ast: RISC_node):
@@ -451,6 +596,7 @@ def fix(instructions: list[RISC_node]):
     i = 0
     while i < len(instructions):
         instr = instructions[i]
+        print(instr)
 
         if instr.ident == "Binary":
             op = instr.child["op"]
@@ -506,6 +652,170 @@ def fix(instructions: list[RISC_node]):
                 instructions.insert(i+1, store_dst)
 
             instructions[i:i] = corrected_bin
+        
+        if instr.ident == "Branch":
+            src1 = instr.child["src1"]
+            src2 = instr.child["src2"]
+
+            src1_reg = RISC_node(("Register", "t3"))
+            src2_reg = RISC_node(("Register", "t4"))
+
+            corrected_branch = []
+
+            if src1.ident[0] == "Imm" or src1.ident[0] == "Stack":
+                load_src1 = RISC_node("Load", {
+                    "src": src1,
+                    "dst": src1_reg
+                })
+                left = src1_reg
+
+                corrected_branch.append(load_src1)
+            else:
+                left = src1
+
+            if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
+                load_src2 = RISC_node("Load", {
+                    "src": src2,
+                    "dst": src2_reg
+                })
+                right = src2_reg
+                corrected_branch.append(load_src2)
+            else:
+                right = src2
+
+            instructions[i] = RISC_node("Branch", {
+                "cond": instr.child["cond"],
+                "src1": left,
+                "src2": right,
+                "branch": instr.child["branch"]
+            })
+
+            try:
+                if store_dst is not None:
+                    instructions.insert(i+1, store_dst)
+            except:
+                pass
+
+            instructions[i:i] = corrected_branch
+        
+        if instr.ident == "SetLessThanU":
+            t3 = RISC_node(("Register", "t3"))
+            t1 = RISC_node(("Register", "t1"))
+            t2 = RISC_node(("Register", "t2"))
+
+            src1 = instr.child["src1"]
+            src2 = instr.child["src2"]
+            dst = instr.child["dst"]
+
+            src1_reg = t3
+            src2_reg = t1
+            dst_reg = t2
+
+            corrected_slt = []
+
+            if src1.ident[0] == "Imm" or src1.ident[0] == "Stack":
+                load_src1 = RISC_node("Load", {
+                    "src": src1,
+                    "dst": src1_reg
+                })
+                left = src1_reg
+
+                corrected_slt.append(load_src1)
+            else:
+                left = src1
+
+            if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
+                load_src2 = RISC_node("Load", {
+                    "src": src2,
+                    "dst": src2_reg
+                })
+                right = src2_reg
+                corrected_slt.append(load_src2)
+            else:
+                right = src2
+
+            if dst.ident[0] == "Imm" or dst.ident[0] == "Stack":
+                store_dst = RISC_node("Store", {
+                    "src": dst_reg,
+                    "dst": dst
+                })
+                result = dst_reg
+            else:
+                store_dst = None
+                result = dst
+
+            instructions[i] = RISC_node("SetLessThanU", {
+                "src1": left,
+                "src2": right,
+                "dst": result
+            })
+
+            try:
+                if store_dst is not None:
+                    instructions.insert(i+1, store_dst)
+            except:
+                pass
+
+            instructions[i:i] = corrected_slt
+        if instr.ident == "SetLessThan":
+            t3 = RISC_node(("Register", "t3"))
+            t1 = RISC_node(("Register", "t1"))
+            t2 = RISC_node(("Register", "t2"))
+
+            src1 = instr.child["src1"]
+            src2 = instr.child["src2"]
+            dst = instr.child["dst"]
+
+            src1_reg = t3
+            src2_reg = t1
+            dst_reg = t2
+
+            corrected_slt = []
+
+            if src1.ident[0] == "Imm" or src1.ident[0] == "Stack":
+                load_src1 = RISC_node("Load", {
+                    "src": src1,
+                    "dst": src1_reg
+                })
+                left = src1_reg
+
+                corrected_slt.append(load_src1)
+            else:
+                left = src1
+
+            if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
+                load_src2 = RISC_node("Load", {
+                    "src": src2,
+                    "dst": src2_reg
+                })
+                right = src2_reg
+                corrected_slt.append(load_src2)
+            else:
+                right = src2
+
+            if dst.ident[0] == "Imm" or dst.ident[0] == "Stack":
+                store_dst = RISC_node("Store", {
+                    "src": dst_reg,
+                    "dst": dst
+                })
+                result = dst_reg
+            else:
+                store_dst = None
+                result = dst
+
+            instructions[i] = RISC_node("SetLessThan", {
+                "src1": left,
+                "src2": right,
+                "dst": result
+            })
+
+            try:
+                if store_dst is not None:
+                    instructions.insert(i+1, store_dst)
+            except:
+                pass
+
+            instructions[i:i] = corrected_slt
 
         if instr.ident == "Unary":
             t0 = RISC_node(("Register", "t0"))

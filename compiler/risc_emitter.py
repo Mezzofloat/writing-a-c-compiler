@@ -92,3 +92,23 @@ def emit_risc(node: RISC_node) -> str:
             return "lt"
         case "Ge":
             return "ge"
+        case "Ne":
+            return "ne"
+        case "Le":
+            return "le"
+        case "Gt":
+            return "gt"
+        case "Mov":
+            return "mv"
+        case "SetLessThan":
+            dst = emit_risc(node.child["dst"])
+            rs1 = emit_risc(node.child["src1"])
+            rs2 = emit_risc(node.child["src2"])
+            return f"slt {dst}, {rs1}, {rs2}"
+        case "SetLessThanU":
+            dst = emit_risc(node.child["dst"])
+            rs1 = emit_risc(node.child["src1"])
+            rs2 = emit_risc(node.child["src2"])
+            return f"sltu {dst}, {rs1}, {rs2}"
+        case "Xor":
+            return "xor"

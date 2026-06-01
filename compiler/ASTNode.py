@@ -176,8 +176,8 @@ Return:
 Jump:
     label to jump to (Identifier)
 JumpIfZero, JumpIfNotZero:
-    condition to compare to zero (Constant | Variable)
-    label to jump to (Identifier)
+    cond: condition to compare to zero (Constant | Variable)
+    label: label to jump to (Identifier)
 Complement, Negate, Add, Sub, Multiply, Divide, Modulus, Copy:
     -
 """
@@ -406,7 +406,7 @@ Function:
 Identifier:
     [name for the node with this as a child (String)]
 Instructions:
-    list of assembly instructions (Binary | Unary | Branch | Identifier | Load | Store | Ret)
+    list of assembly instructions (Binary | Unary | Branch | Identifier | Load | Store | Ret | SetLessThan | SetLessThanU)
 Binary:
     op: operation (Add | Sub)
     src1: left operand (Register | Stack | Imm)
@@ -414,11 +414,11 @@ Binary:
     dst: result (Register | Stack)
     (subi is not a thing, src1 should eventually be not imm)
 Unary:
-    op: operation (Not | Neg)
+    op: operation (Not | Neg | Mov)
     src: operand (Stack | Imm | Register)
     dst: result (Stack | Register)
 Branch:
-    cond: condition of branching (Eq | Lt | Ge)
+    cond: condition of branching (Eq | Lt | Ge | Ne | Le | Gt)
     src1: left operand of comparison (Register | Stack)
     src2: right operand of comparison (Register | Stack)
     branch: location to branch to (Identifier)
@@ -428,6 +428,14 @@ Load:
 Store:
     src: source register which destination gets value from (Register)
     dst: destination on the stack (Stack)
+SetLessThan(U):
+    src1: *left* < right (Stack | Register | Imm)
+    src2: left < *right* (Stack | Register | Imm)
+    dst: (Stack | Register)
+Xor:
+    src1: operand (Stack | Register | Imm)
+    src2: operand (Stack | Register | Imm)
+    dst: result (Stack | Register)
 Imm:
     [value for the node with this as a child (Int)]
 Stack:
@@ -436,7 +444,7 @@ AllocateStack:
     amount to be allocated (Imm)
 Register:
     [register that node with this as a child uses (String)]
-Ret, Not, Neg, Add, Sub, Eq, Lt, Ge:
+Ret, Not, Neg, Add, Sub, Eq, Ne, Le, Lt, Ge, Gt:
     -
 """
 
@@ -446,6 +454,7 @@ class RISC_node(ASTNode):
         
         try:
             LIST = 0
+            VALUE = ['Imm', 'Pseudo', 'Stack', 'Register']
 
             def expect(*args):
                 if len(args) == 1:
@@ -460,6 +469,7 @@ class RISC_node(ASTNode):
                     if args[0] == LIST:
                         for entry in child: # type: ignore
                             if entry.ident not in args[1] and entry.ident[0] not in args[1]:
+                                print(entry)
                                 raise AssertionError(f"Error in asserting grammar on {self}")
                             
                         return
@@ -471,10 +481,10 @@ class RISC_node(ASTNode):
                     ls = args[1]
 
                     if child[key].ident not in ls and child[key].ident[0] not in ls:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
+                        raise AssertionError(f"Error in asserting grammar on {self} with child {child}")
                 elif len(args) == 0:
                     if child is not None:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
+                        raise AssertionError(f"Error in asserting grammar on {self} with child {child}")
                 else:
                     raise SyntaxError("Incorrect number of arguments")
 
@@ -485,20 +495,20 @@ class RISC_node(ASTNode):
                     expect("name", ["Identifier"])
                     expect("instructions", ["Instructions"])
                 case "Instructions":
-                    expect(LIST, ['Unary', 'Ret', 'Load', 'Store', 'Binary', 'Identifier', 'Branch'])
+                    expect(LIST, ['Unary', 'Ret', 'Load', 'Store', 'Binary', 'Identifier', 'Branch', 'SetLessThan', 'SetLessThanU', 'Mov'])
                 case "Binary":
-                    expect("op", ['Add', 'Sub'])
+                    expect("op", ['Add', 'Sub', 'Xor'])
                     expect("src1", ['Register', 'Stack', 'Pseudo', 'Imm'])
                     expect("src2", ['Register', 'Stack', 'Pseudo', 'Imm'])
                     expect("dst", ['Register', 'Stack', 'Pseudo'])
                 case "Unary":
-                    expect("op", ['Not', 'Neg'])
+                    expect("op", ['Not', 'Neg', 'Mov'])
                     expect("src", ['Pseudo', 'Stack', 'Imm', 'Register'])
                     expect("dst", ['Pseudo', 'Stack', 'Register'])
                 case "Branch":
-                    expect("cond", ['Eq', 'Lt', 'Ge'])
-                    expect("src1", ['Register', 'Stack', 'Pseudo'])
-                    expect("src2", ['Register', 'Stack', 'Pseudo'])
+                    expect("cond", ['Eq', 'Lt', 'Ge', 'Ne', 'Le', 'Gt'])
+                    expect("src1", VALUE)
+                    expect("src2", VALUE)
                     expect("branch", ['Identifier'])
                 case "Load":
                     expect("src", ['Pseudo', 'Imm', 'Stack'])
@@ -510,8 +520,12 @@ class RISC_node(ASTNode):
                     expect(["Identifier"])
                 case "AllocateStack":
                     expect(["Imm"])
-                case ("Identifier", _) | ("Imm", _) | ("Register", _) | ("Stack", _) | "Ret" | "Not" | "Neg" | "Add" | "Sub" | "Eq" | "Lt" | "Ge":
+                case ("Identifier", _) | ("Imm", _) | ("Register", _) | ("Stack", _) | "Ret" | "Not" | "Neg" | "Add" | "Sub" | "Eq" | "Ne" | "Le" | "Lt" | "Ge" | "Gt" | "Mov" | "Xor":
                     expect()
+                case "SetLessThan" | "SetLessThanU":
+                    expect("src1", VALUE)
+                    expect("src2", VALUE)
+                    expect("dst", ['Stack', 'Pseudo', 'Register'])
                 case _:
                     raise ValueError(f"unexpected node {ident}")
 
