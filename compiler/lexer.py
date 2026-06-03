@@ -8,30 +8,38 @@ token_matchers = [r"[a-zA-Z_]\w*\b", r"[0-9]+\b", r"\(", r"\)", r"{", r"}",
 def lex(content: str) -> list:
     tokens = []
     while (content := content.lstrip()) != "":
-        startMatch = False
+        longestMatch = None
+        matchType = None
         for matcher in token_matchers:
             m = re.match(matcher, content)
             if m:
-                startMatch = True
+                # skip shorter matches
+                if longestMatch and len(m[0]) <= len(longestMatch):
+                    continue
 
                 # matcher is for identifiers
                 if matcher == r"[a-zA-Z_]\w*\b":
                     if m[0] in keywords:
-                        tokens.append((m[0]))
+                        longestMatch = m[0]
                     else:
-                        tokens.append(("Identifier", m[0]))
+                        longestMatch = m[0]
+                        matchType = "Identifier"
 
                 # matcher is for constants
                 elif matcher == r"[0-9]+\b":
-                    tokens.append(("Constant", m[0]))
+                    longestMatch = m[0]
+                    matchType = "Constant"
                 else:
-                    tokens.append((m[0]))
-                content = content[len(m[0]):]
-
-                # break from the for loop into the while loop
-                break
-
-        if not startMatch:
+                    longestMatch = m[0]
+        
+        if not longestMatch:
             raise ValueError
+        
+        if matchType:
+            tokens.append((matchType, longestMatch))
+        else:
+            tokens.append(longestMatch)
+
+        content = content[len(longestMatch):]
             
     return tokens
