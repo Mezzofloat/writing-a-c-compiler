@@ -17,19 +17,12 @@ def emit_risc(node: RISC_node) -> str:
         case "Instructions":
             s = ""
 
-            if node.child[0].ident == "AllocateStack":
-                end = "\taddi sp, sp, " + str(node.child[0].child.ident[1]) + '\n'
-            else:
-                end = ""
-
             for inst in node.child:
                 if type(inst.ident) is tuple and inst.ident[0] == "Identifier":
                     s += emit_risc(inst) + ':\n'
                 else:
                     s += '\t' + emit_risc(inst) + '\n'
              
-            s = f"{s[:-5]}{end}{s[-5:]}"
-
             return s
         case "Load":
             if node.child["src"].ident[0] == "Imm":
@@ -74,8 +67,6 @@ def emit_risc(node: RISC_node) -> str:
             return ident
         case ("Imm", imm):
             return str(imm)
-        case "AllocateStack":
-            return f"addi sp, sp, -{node.child.ident[1]}"
         case "Ret":
             return "ret"
         case "Not":

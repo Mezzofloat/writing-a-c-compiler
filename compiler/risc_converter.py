@@ -587,9 +587,16 @@ def fix_instructions(ast: RISC_node):
         raise ValueError(f"fix_instructions called on {ast}")
 
 def fix(instructions: list[RISC_node]):
+    # formerly AllocateStack
     if allocate_offset > 0:
-        amount = RISC_node(("Imm", allocate_offset))
-        new_inst = RISC_node("AllocateStack", amount)
+        amount = RISC_node(("Imm", -allocate_offset))
+        sp = RISC_node(("Register", "sp"))
+        new_inst = RISC_node("Binary", {
+            "op": RISC_node("Add"),
+            "src1": sp,
+            "src2": amount,
+            "dst": sp
+        })
 
         instructions.insert(0, new_inst)
 
@@ -666,3 +673,17 @@ def fix(instructions: list[RISC_node]):
                 continue
         
         i += 1
+
+    # Deallocate stack at the end
+    if allocate_offset > 0:
+        amount = RISC_node(("Imm", allocate_offset))
+        sp = RISC_node(("Register", "sp"))
+
+        new_inst = RISC_node("Binary", {
+            "op": RISC_node("Add"),
+            "src1": sp,
+            "src2": amount,
+            "dst": sp
+        })
+
+        instructions.append(new_inst)

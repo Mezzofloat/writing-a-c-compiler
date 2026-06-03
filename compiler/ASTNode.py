@@ -408,7 +408,7 @@ Identifier:
 Instructions:
     list of assembly instructions (Binary | Unary | Branch | Identifier | Load | Store | Ret | SetLessThan | SetLessThanU)
 Binary:
-    op: operation (Add | Sub)
+    op: operation (Add | Sub | Xor)
     src1: left operand (Register | Stack | Imm)
     src2: right operand (Register | Stack | Imm)
     dst: result (Register | Stack)
@@ -432,10 +432,6 @@ SetLessThan(U):
     src1: *left* < right (Stack | Register | Imm)
     src2: left < *right* (Stack | Register | Imm)
     dst: (Stack | Register)
-Xor:
-    src1: operand (Stack | Register | Imm)
-    src2: operand (Stack | Register | Imm)
-    dst: result (Stack | Register)
 Imm:
     [value for the node with this as a child (Int)]
 Stack:
@@ -518,8 +514,6 @@ class RISC_node(ASTNode):
                     expect("dst", ["Pseudo", "Stack"])
                 case "Pseudo":
                     expect(["Identifier"])
-                case "AllocateStack":
-                    expect(["Imm"])
                 case ("Identifier", _) | ("Imm", _) | ("Register", _) | ("Stack", _) | "Ret" | "Not" | "Neg" | "Add" | "Sub" | "Eq" | "Ne" | "Le" | "Lt" | "Ge" | "Gt" | "Mov" | "Xor":
                     expect()
                 case "SetLessThan" | "SetLessThanU":
