@@ -24,6 +24,9 @@ argparser.add_argument('-S', action="store_true")
 
 argparser.add_argument('--assembly-lang', '-l', choices=['risc-v', 'x86'])
 
+#timing is opt-in
+argparser.add_argument('--time', action="store_true")
+
 args = argparser.parse_args()
 if len(args.path) < 1 or not args.path.endswith('.c'):
     exit(1)
@@ -41,13 +44,15 @@ if not os.path.exists(preprocessed):
 with open(preprocessed, 'r') as file:
     file_contents = file.read()
 
-start = time.time()
+if args.time:
+    start = time.time()
 
 # lex path.i
 tokens = lex(file_contents)
 
-lex_time = time.time()
-print(f"Lexing took {lex_time - start} seconds")
+if args.time:
+    lex_time = time.time()
+    print(f"Lexing took {lex_time - start} seconds")
 
 if args.lex:
     print(tokens)
@@ -59,8 +64,9 @@ C_ast = parse_program(tokens)
 print("\nC_ast:")
 print(C_ast)
 
-parse_time = time.time()
-print(f"Parsing took {parse_time - lex_time} seconds")
+if args.time:
+    parse_time = time.time()
+    print(f"Parsing took {parse_time - lex_time} seconds")
 
 if args.parse:
     print('stopping at parse')
@@ -71,8 +77,9 @@ ATTACK_ast = c_to_attack(C_ast)
 print("\nATTACK_ast:")
 print(ATTACK_ast)
 
-attack_time = time.time()
-print(f"Converting to ATTACK took {attack_time - parse_time} seconds")
+if args.time:
+    attack_time = time.time()
+    print(f"Converting to ATTACK took {attack_time - parse_time} seconds")
 
 # --tacky is required by the books' tests i'm using
 if args.tacky:
@@ -103,20 +110,26 @@ else:
 Assembly_ast = convert(ATTACK_ast)
 print("First Assembly_ast:")
 print(Assembly_ast)
-assembly_time = time.time()
-print(f"Converting to Assembly took {assembly_time - attack_time} seconds")
+
+if args.time:
+    assembly_time = time.time()
+    print(f"Converting to Assembly took {assembly_time - attack_time} seconds")
 
 add_stacks(Assembly_ast)
 print("Non-pseudo ast:")
 print(Assembly_ast)
-pseudo_time = time.time()
-print(f"Replacing pseudo registers took {pseudo_time - assembly_time} seconds")
+
+if args.time:
+    pseudo_time = time.time()
+    print(f"Replacing pseudo registers took {pseudo_time - assembly_time} seconds")
 
 fix_insts(Assembly_ast)
 print("Fixed-instructions ast:")
 print(Assembly_ast)
-fix_time = time.time()
-print(f"Fixing instructions took {fix_time - pseudo_time} seconds")
+
+if args.time:
+    fix_time = time.time()
+    print(f"Fixing instructions took {fix_time - pseudo_time} seconds")
 
 if args.codegen:
     print('stopping at codegen')
@@ -126,9 +139,10 @@ if args.codegen:
 with open(assembly, "w") as f:
     print(emit_code(Assembly_ast), file=f)
 
-emit_time = time.time()
-print(f"Emitting code took {emit_time - fix_time} seconds")
-print(f"All in all, program took {emit_time - start} seconds")
+if args.time:
+    emit_time = time.time()
+    print(f"Emitting code took {emit_time - fix_time} seconds")
+    print(f"All in all, program took {emit_time - start} seconds")
 
 # assemble and link
 os.system(f"{prefix}gcc {assembly} -o {executable} -g -Og")
