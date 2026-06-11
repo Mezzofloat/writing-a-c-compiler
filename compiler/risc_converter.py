@@ -60,9 +60,6 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
             op = node.child["op"].ident
 
             if op == "Multiply":
-                uniq = RISC_node(("Identifier", create_uniq_ident()))
-                ident_loop = uniq
-
                 # cheeky balatro reference
                 chips = attack_to_risc_ast(node.child["src1"])
                 mult = attack_to_risc_ast(node.child["src2"])
@@ -71,7 +68,10 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                 chips_reg = RISC_node(("Register", "a3"))
                 mult_reg = RISC_node(("Register", "a4"))
                 result_reg = RISC_node(("Register", "a2"))
+                const_five = RISC_node(("Register", "t0"))
+                quintuple_chips_reg = RISC_node(("Register", "t1"))
 
+                # prologue
                 load_chips = RISC_node("Load", {
                     "src": chips,
                     "dst": chips_reg
@@ -85,6 +85,71 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                 load_zero = RISC_node("Load", {
                     "src": RISC_node(("Imm", '0')),
                     "dst": result_reg
+                })
+
+                load_five = RISC_node("Load", {
+                    "src": RISC_node(("Imm", 5)),
+                    "dst": const_five
+                })
+
+                load_quintuple_chips = RISC_node("Load", {
+                    "src": chips,
+                    "dst": quintuple_chips_reg
+                })
+
+                make_quintuple_chips_1 = RISC_node("Binary", {
+                    "op": RISC_node("Add"),
+                    "src1": quintuple_chips_reg,
+                    "src2": chips_reg,
+                    "dst": quintuple_chips_reg
+                })
+                make_quintuple_chips_2 = make_quintuple_chips_1
+                make_quintuple_chips_3 = make_quintuple_chips_1
+                make_quintuple_chips_4 = make_quintuple_chips_1
+
+                # quintuple speed loop
+                uniq_quint = RISC_node(("Identifier", create_uniq_ident() + 'q'))
+                ident_quint = uniq_quint
+                end_quint = RISC_node(("Identifier", f"end{uniq_quint.ident[1]}"))
+
+                branch_quint = RISC_node("Branch", {
+                    "cond": RISC_node("LtU"),
+                    "src1": mult_reg,
+                    "src2": const_five,
+                    "branch": end_quint
+                })
+
+                add_chips_quint = RISC_node("Binary", {
+                    "op": RISC_node("Add"),
+                    "src1": result_reg,
+                    "src2": quintuple_chips_reg,
+                    "dst": result_reg
+                })
+
+                sub_mult_quint = RISC_node("Binary", {
+                    "op": RISC_node("Sub"),
+                    "src1": mult_reg,
+                    "src2": const_five,
+                    "dst": mult_reg
+                })
+
+                jump_loop_quint = RISC_node("Branch", {
+                    "cond": RISC_node("Eq"),
+                    "src1": RISC_node(("Register", "x0")),
+                    "src2": RISC_node(("Register", "x0")),
+                    "branch": ident_quint
+                })
+                
+                # loop
+                uniq = RISC_node(("Identifier", create_uniq_ident()))
+                ident_loop = uniq
+                end_loop = RISC_node(("Identifier", f"end{uniq.ident[1]}"))
+                
+                branch = RISC_node("Branch", {
+                    "cond": RISC_node("Eq"),
+                    "src1": RISC_node(("Register", "x0")),
+                    "src2": mult_reg,
+                    "branch": end_loop
                 })
 
                 add_chips = RISC_node("Binary", {
@@ -101,20 +166,6 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                     "dst": mult_reg
                 })
 
-                store_back = RISC_node("Store", {
-                    "src": result_reg,
-                    "dst": attack_to_risc_ast(node.child["dst"])
-                })
-
-                end_loop = RISC_node(("Identifier", f"end{uniq.ident[1]}"))
-
-                branch = RISC_node("Branch", {
-                    "cond": RISC_node("Eq"),
-                    "src1": RISC_node(("Register", "x0")),
-                    "src2": mult_reg,
-                    "branch": end_loop
-                })
-
                 jump_loop = RISC_node("Branch", {
                     "cond": RISC_node("Eq"),
                     "src1": RISC_node(("Register", "x0")),
@@ -122,7 +173,15 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                     "branch": ident_loop
                 })
 
-                return [load_chips, load_mult, load_zero, ident_loop, branch, add_chips, sub_mult, jump_loop, end_loop, store_back]
+                store_back = RISC_node("Store", {
+                    "src": result_reg,
+                    "dst": attack_to_risc_ast(node.child["dst"])
+                })
+
+                return [load_chips, load_mult, load_zero, load_five, load_quintuple_chips, make_quintuple_chips_1, make_quintuple_chips_2, make_quintuple_chips_3, make_quintuple_chips_4,
+                        ident_quint, branch_quint, add_chips_quint, sub_mult_quint, jump_loop_quint, end_quint,
+                        ident_loop, branch, add_chips, sub_mult, jump_loop, end_loop,
+                        store_back]
             elif op == "Divide":
                 dividend_reg = RISC_node(("Register", "a3"))
                 divisor_reg = RISC_node(("Register", "a4"))

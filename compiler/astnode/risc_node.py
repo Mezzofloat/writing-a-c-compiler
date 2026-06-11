@@ -24,7 +24,7 @@ Unary:
     src: operand (Stack | Imm | Register)
     dst: result (Stack | Register)
 Branch:
-    cond: condition of branching (Eq | Lt | Ge | Ne | Le | Gt)
+    cond: condition of branching (Eq | Lt | Ge | Ne | Le | Gt | LtU)
     src1: left operand of comparison (Register | Stack)
     src2: right operand of comparison (Register | Stack)
     branch: location to branch to (Identifier)
@@ -108,7 +108,7 @@ class RISC_node(ASTNode):
                     expect("src", ['Pseudo', 'Stack', 'Imm', 'Register'])
                     expect("dst", ['Pseudo', 'Stack', 'Register'])
                 case "Branch":
-                    expect("cond", ['Eq', 'Lt', 'Ge', 'Ne', 'Le', 'Gt'])
+                    expect("cond", ['Eq', 'Lt', 'Ge', 'Ne', 'Le', 'Gt', 'LtU'])
                     expect("src1", VALUE)
                     expect("src2", VALUE)
                     expect("branch", ['Identifier'])
@@ -120,7 +120,7 @@ class RISC_node(ASTNode):
                     expect("dst", ["Pseudo", "Stack"])
                 case "Pseudo":
                     expect(["Identifier"])
-                case ("Identifier", _) | ("Imm", _) | ("Register", _) | ("Stack", _) | "Ret" | "Not" | "Neg" | "Add" | "Sub" | "Eq" | "Ne" | "Le" | "Lt" | "Ge" | "Gt" | "Mov" | "Xor":
+                case ("Identifier", _) | ("Imm", _) | ("Register", _) | ("Stack", _) | "Ret" | "Not" | "Neg" | "Add" | "Sub" | "Eq" | "Ne" | "Le" | "Lt" | "Ge" | "Gt" | "Mov" | "Xor" | "LtU":
                     expect()
                 case "SetLessThan" | "SetLessThanU":
                     expect("src1", VALUE)

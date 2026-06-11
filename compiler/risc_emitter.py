@@ -91,6 +91,8 @@ def emit_risc(node: RISC_node) -> str:
             return "gt"
         case "Mov":
             return "mv"
+        case "LtU":
+            return "ltu"
         case "SetLessThan":
             dst = emit_risc(node.child["dst"])
             rs1 = emit_risc(node.child["src1"])

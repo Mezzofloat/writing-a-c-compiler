@@ -5,6 +5,9 @@ test_framework/*
 templates/*
 .github/*
 
+# reintroduce everything in c_code
+!c_code/*
+
 # remove tests from git repo, for more see README
 tests/
 test_compiler
