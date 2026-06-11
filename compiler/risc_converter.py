@@ -1,4 +1,5 @@
-from ASTNode import ATTACK_node, RISC_node
+from astnode.attack_node import ATTACK_node
+from astnode.risc_node import RISC_node
 
 # based on my work in x86_converter.py
 
@@ -686,4 +687,4 @@ def fix(instructions: list[RISC_node]):
             "dst": sp
         })
 
-        instructions.append(new_inst)
+        instructions.insert(-1, new_inst)

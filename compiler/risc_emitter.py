@@ -1,4 +1,4 @@
-from ASTNode import RISC_node
+from astnode.risc_node import RISC_node
 
 def emit_risc(node: RISC_node) -> str:
     match node.ident:

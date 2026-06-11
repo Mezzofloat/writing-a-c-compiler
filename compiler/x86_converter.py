@@ -1,4 +1,5 @@
-from ASTNode import ATTACK_node, x86_node
+from astnode.attack_node import ATTACK_node
+from astnode.x86_node import x86_node
 
 # the amount the stack needs to allocate, set at the end of replace_pseudo
 allocate_offset = 0

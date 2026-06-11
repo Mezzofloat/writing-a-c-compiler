@@ -1,4 +1,4 @@
-from ASTNode import C_node
+from astnode.c_node import C_node
 
 token_idx = 0
 tokens = []

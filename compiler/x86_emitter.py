@@ -1,4 +1,4 @@
-from ASTNode import x86_node
+from astnode.x86_node import x86_node
 
 def emit_x86(node: x86_node) -> str:
     match node.ident:

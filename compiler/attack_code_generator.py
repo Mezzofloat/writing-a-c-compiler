@@ -1,4 +1,5 @@
-from ASTNode import C_node, ATTACK_node
+from astnode.c_node import C_node
+from astnode.attack_node import ATTACK_node
 
 # generate attack ast (ATTACK: A Temporary Three Address Code Kompiler)
 
