@@ -1,10 +1,14 @@
-.globl main
+	.globl main
 main:
-	addi sp, sp, -4
-	li a1, 0
-	slt t0, a1, t0
-	sw t0, 0(sp)
-	lw a0, 0(sp)
-	addi sp, sp, 4
+	pushq	%rbp
+	movq	%rsp, %rbp
+	subq	$4, %rsp
+	movl	$0, %r11d
+	cmpl	$0, %r11d
+	movl	$0, -4(%rbp)
+	sete	-4(%rbp)
+	movl	-4(%rbp), %eax
+	movq	%rbp, %rsp
+	popq	%rbp
 	ret
 	.section .note.GNU-stack,"",@progbits

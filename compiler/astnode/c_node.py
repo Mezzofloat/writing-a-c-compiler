@@ -24,10 +24,35 @@ Binary:
                                                                 | LessOrEqual | GreaterThan | GreaterOrEqual)
     left: left operand (Constant | Unary | Binary)
     right: right operand (Constant | Unary | Binary)
-Complement, Negate, Add, Sub, Multiply, Divide, Modulus, And, Or, etc.:
+Complement, Negate, Add, Sub, Multiply, Divide, Modulus, Not, And, Or, etc.:
     -
 """
 
+C_node_types = {
+    "Program": ["Function"],
+    "Function": {"name": ["Identifier"], "body": ["Return"]},
+    "Return": ['Constant', 'Unary', 'Binary'],
+    "Unary": {"op": ["Complement", "Negate", "Not"], "inner_exp": ["Constant", "Unary", "Binary"]},
+    "Binary": {"op": ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus', 'And', 'Or', 'LessThan', 'GreaterThan', 'Equal', 'NotEqual', 'LessOrEqual', 'GreaterOrEqual'], 
+                "left": ["Constant", "Unary", "Binary"], 
+                "right": ["Constant", "Unary", "Binary"]},
+    "Complement": [],
+    "Negate": [],
+    "Add": [],
+    "Sub": [],
+    "Multiply": [],
+    "Divide": [],
+    "Modulus": [],
+    "And": [],
+    "Or": [],
+    "Equal": [],
+    "NotEqual": [],
+    "LessThan": [],
+    "GreaterThan": [],
+    "LessOrEqual": [],
+    "GreaterOrEqual": [],
+    "Not": []
+}
 
 class C_node(ASTNode):
     def __init__(self, ident, child=None):
@@ -66,28 +91,25 @@ class C_node(ASTNode):
                         raise AssertionError(f"Error in asserting grammar on {self}")
                 else:
                     raise SyntaxError("Incorrect number of arguments")
-                
-            match ident:
-                case "Program":
-                    expect(["Function"])
-                case "Function":
-                    expect("name", ["Identifier"])
-                    expect("body", ["Return"])
-                case "Return":
-                    expect(['Constant', 'Unary', 'Binary'])
-                case "Unary":
-                    expect("op", ["Complement", "Negate", 'Not'])
-                    expect("inner_exp", ["Constant", "Unary", "Binary"])
-                case "Binary":
-                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus', 'And', 'Or', 'LessThan', 'GreaterThan', 'Equal', 'NotEqual', 'LessOrEqual', 'GreaterOrEqual'])
-                    expect("left", ["Constant", "Unary", "Binary"])
-                    expect("right", ["Constant", "Unary", "Binary"])
-                case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
-                    expect()
-                case "And" | "Or" | "Not" | "Equal" | "NotEqual" | "LessThan" | "GreaterThan" | "LessOrEqual" | "GreaterOrEqual":
-                    expect()
-                case _:
+
+            if ident not in C_node_types:
+                if type(ident) is tuple:
+                    pass
+                else:
                     raise ValueError(f"unexpected node {ident}")
+            else:
+                vals = C_node_types[ident]
+                if type(vals) is dict:
+                    for key, ls in vals.items():
+                        expect(key, ls)
+                elif type(vals) is list:
+                    if len(vals) == 0:
+                        expect()
+                    else:
+                        expect(vals)
+                else:
+                    raise TypeError(f"unexpected type of node {ident} in C_node_types")
+
         except AttributeError:
             raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
         except KeyError:

@@ -357,7 +357,7 @@ def fix(instructions: list[x86_node]):
 
     while i < len(instructions):
         instr = instructions[i]
-        print(instr)
+        #print(instr)
 
         if instr.ident == "Unary" and instr.child["op"].ident == "Div" and instr.child["dst"].ident[0] == "Imm":
             imm = instr.child["dst"].ident[1]
