@@ -35,81 +35,67 @@ Complement, Negate, Add, Sub, Multiply, Divide, Modulus, Copy:
     -
 """
 
+ATTACK_node_types = {
+    "Program": ["Function"],
+    "Function": {"name": ["Identifier"], "instructions": ["Instruction*"]},
+    "Instruction": ['Binary', 'Unary', 'Return', 'Jump', 'JumpIfZero', 'JumpIfNotZero', 'Identifier'],
+    "Return": ['Unary', 'Binary', 'Variable', 'Constant'],
+    "Unary": {"op": ["Complement", "Negate", 'Copy', 'Not'], "src": ["Variable", "Constant"], "dst": ["Variable"]},
+    "Binary": {"op": ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus', 'Equal', 'NotEqual', 'LessThan', 'LessOrEqual', 'GreaterThan', 'GreaterOrEqual'], 
+                "src1": ["Variable", "Constant"], 
+                "src2": ["Variable", "Constant"], 
+                "dst": ["Variable"]},
+    "Variable": ["Identifier"],
+    "Jump": ['Identifier'],
+    "JumpIfZero": {"cond": ['Variable', 'Constant'], "label": ['Identifier']},
+    "JumpIfNotZero": {"cond": ['Variable', 'Constant'], "label": ['Identifier']},
+    "Complement": [],
+    "Negate": [],
+    "Copy": [],
+    "Add": [],
+    "Sub": [],
+    "Multiply": [],
+    "Divide": [],
+    "Modulus": [],
+    "Not": [],
+    "LessThan": [],
+    "LessOrEqual": [],
+    "GreaterThan": [],
+    "GreaterOrEqual": [],
+    "Equal": [],
+    "NotEqual": []
+}
+
 class ATTACK_node(ASTNode):
     def __init__(self, ident, child=None):
         super().__init__(ident)
         
-        try:
-            LIST = 0
-
-            def expect(*args):
-                if len(args) == 1:
-                    if type(args[0]) is not list or type(child) is not ATTACK_node:
-                        raise TypeError(f"Error in function call of expect({args})")
-                    
-                    ls = args[0]
-                    
-                    if child.ident not in ls and child.ident[0] not in ls:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
-                elif len(args) == 2:
-                    if args[0] == LIST:
-                        for entry in child: # type: ignore
-                            if entry.ident not in args[1]:
-                                raise AssertionError(f"Error in asserting grammar on {self}")
-                            
-                        return
-
-                    if type(args[0]) is not str or type(args[1]) is not list or type(child) is not dict:
-                        raise TypeError(f"Error in function call of expect({args})")
-                    
-                    key = args[0]
-                    ls = args[1]
-
-                    if child[key].ident not in ls and child[key].ident[0] not in ls:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
-                elif len(args) == 0:
+        if ident not in ATTACK_node_types:
+            if type(ident) is not tuple:
+                raise ValueError(f"unexpected node {ident}")
+        else:
+            vals = ATTACK_node_types[ident]
+            if type(vals) is dict:
+                for key, ls in vals.items():
+                    in_list = False
+                    for accepted_type in ls:
+                        if accepted_type.endswith('*'):
+                            for item in child[key]:
+                                if item.ident == accepted_type[:-1] or item.ident[0] == accepted_type[:-1]:
+                                    in_list = True
+                        else:
+                            if child[key].ident == accepted_type or child[key].ident[0] == accepted_type:
+                                in_list = True
+                    if not in_list:
+                        raise ValueError(f"{key} should be in {ls} but got {child[key]} for node {ident}")
+            elif type(vals) is list:
+                if len(vals) == 0:
                     if child is not None:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
+                        raise ValueError(f"unexpected child {child} for node {ident}")
                 else:
-                    raise SyntaxError("Incorrect number of arguments")
-                
-            match ident:
-                case "Program":
-                    expect(["Function"])
-                case "Function":
-                    expect("name", ["Identifier"])
-                    expect("instructions", ["Instructions"])
-                case "Instructions":
-                    expect(LIST, ['Binary', 'Unary', 'Return', 'Jump', 'JumpIfZero', 'JumpIfNotZero'])
-                case "Return":
-                    expect(['Unary', 'Binary', 'Variable', 'Constant'])
-                case "Unary":
-                    expect("op", ["Complement", "Negate", 'Not', 'Copy'])
-                    expect("src", ["Variable", "Constant"])
-                    expect("dst", ["Variable"])
-                case "Binary":
-                    expect("op", ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus', 'Equal', 'NotEqual', 'LessThan', 'LessOrEqual', 'GreaterThan', 'GreaterOrEqual'])
-                    expect("src1", ["Variable", "Constant"])
-                    expect("src2", ["Variable", "Constant"])
-                    expect("dst", ["Variable"])
-                case "Variable":
-                    expect(["Identifier"])
-                case "Jump":
-                    expect(['Identifier'])
-                case "JumpIfZero" | "JumpIfNotZero":
-                    expect("cond", ['Variable', 'Constant'])
-                    expect("label", ['Identifier'])
-                case "Complement" | "Negate" | "Add" | "Sub" | "Multiply" | "Divide" | "Modulus" | ("Identifier", _) | ("Constant", _):
-                    expect()
-                case "Copy" | "Not" | "LessThan" | "LessOrEqual" | "GreaterThan" | "GreaterOrEqual" | "Equal" | "NotEqual":
-                    expect()
-                case _:
-                    raise ValueError(f"unexpected node {ident}")
-        except AttributeError:
-            raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
-        except KeyError:
-            raise AssertionError(f"Error in accessing dict; {child} is either not dict or doesn't have required key")
-        except IndexError:
-            raise AssertionError(f"Error in indexing tuple; {child} doesn't have a tuple somewhere")
-        finally:
-            self.child = child
+                    if child.ident not in vals and child.ident[0] not in vals:
+                        raise ValueError(f"unexpected child {child} for node {ident}")
+            else:
+                raise TypeError(f"unexpected type of node {ident} in ATTACK_node_types")
+        
+        self.child = child

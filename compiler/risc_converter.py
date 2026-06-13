@@ -19,18 +19,10 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
             return RISC_node("Program", func)
         case "Function":
             name = attack_to_risc_ast(node.child["name"])
-            instructions = attack_to_risc_ast(node.child["instructions"])
-
-            return RISC_node("Function", {
-                "name": name,
-                "instructions": instructions
-            })
-        case ("Identifier", _):
-            return RISC_node(node.ident)
-        case "Instructions":
+            
             newinst = []
 
-            for instr in node.child:
+            for instr in node.child["instructions"]:
                 outcome = attack_to_risc_ast(instr)
 
                 if type(outcome) is list:
@@ -39,8 +31,15 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
 
                 else:
                     newinst.append(outcome)
-            
-            return RISC_node("Instructions", newinst)
+
+            return RISC_node("Function", {
+                "name": name,
+                "instructions": RISC_node("Instructions", newinst)
+            })
+        case ("Identifier", _):
+            return RISC_node(node.ident)
+        case "Instruction":
+            return attack_to_risc_ast(node.child)
         case "Return":
             num = attack_to_risc_ast(node.child)
             reg = RISC_node(("Register", "a0"))

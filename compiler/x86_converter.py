@@ -111,21 +111,8 @@ def attack_to_x86_ast(node: ATTACK_node) -> x86_node:
                 })
 
                 return [mov, binary]
-        case "Instructions":
-            new_instructions = []
-
-            for instr in node.child:
-                outcome = attack_to_x86_ast(instr)
-
-                if type(outcome) is list:
-                    for entry in outcome:
-                        new_instructions.append(entry)
-                else:
-                    new_instructions.append(attack_to_x86_ast(instr))
-            
-            new_node = x86_node("Instructions", new_instructions)
-
-            return new_node
+        case "Instruction":
+            return attack_to_x86_ast(node.child)
         case ("Constant", x):
             return x86_node(("Imm", x))
         case "Variable":
@@ -188,9 +175,20 @@ def attack_to_x86_ast(node: ATTACK_node) -> x86_node:
             
             return [mov, ret]
         case "Function":
+            new_instructions = []
+
+            for instr in node.child["instructions"]:
+                outcome = attack_to_x86_ast(instr)
+
+                if type(outcome) is list:
+                    for entry in outcome:
+                        new_instructions.append(entry)
+                else:
+                    new_instructions.append(attack_to_x86_ast(instr))
+            
             func = x86_node("Function", {
                 "name": attack_to_x86_ast(node.child["name"]),
-                "instructions": attack_to_x86_ast(node.child["instructions"])
+                "instructions": x86_node("Instructions", new_instructions)
             })
 
             return func

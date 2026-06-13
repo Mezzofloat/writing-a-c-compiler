@@ -123,14 +123,20 @@ def exp_to_attack(exp_node : C_node, instruc):
 def c_to_attack(node : C_node):
     match node.ident:
         case "Function":
+            insts = []
 
-            insts = ATTACK_node("Instructions", [])
+            exp_to_attack(node.child["body"], insts)
 
-            exp_to_attack(node.child["body"], insts.child)
+            newinsts = []
+
+            for inst in insts:
+                newinsts.append(ATTACK_node("Instruction", inst))
+
+            print(newinsts[0].child)
 
             func = ATTACK_node("Function", {
                 "name": node.child["name"],
-                "instructions": insts
+                "instructions": newinsts
             })
             return func
         case _:
