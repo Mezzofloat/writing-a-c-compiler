@@ -1,50 +1,10 @@
 from astnode.ASTNode import ASTNode
 
 """
-Definitions for the types of RISC-V nodes:
-Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
-
-Program:
-    function contained in the program (Function)
-Function:
-    name: name of the function (Identifier)
-    instructions: list of instructions (Instructions)
-Identifier:
-    [name for the node with this as a child (String)]
-Instructions:
-    list of assembly instructions (Binary | Unary | Branch | Identifier | Load | Store | Ret | SetLessThan | SetLessThanU)
-Binary:
-    op: operation (Add | Sub | Xor)
-    src1: left operand (Register | Stack | Imm)
-    src2: right operand (Register | Stack | Imm)
-    dst: result (Register | Stack)
-    (subi is not a thing, src1 should eventually be not imm)
-Unary:
-    op: operation (Not | Neg | Mov)
-    src: operand (Stack | Imm | Register)
-    dst: result (Stack | Register)
-Branch:
-    cond: condition of branching (Eq | Lt | Ge | Ne | Le | Gt | LtU)
-    src1: left operand of comparison (Register | Stack)
-    src2: right operand of comparison (Register | Stack)
-    branch: location to branch to (Identifier)
-Load:
-    src: source which destination gets value from (Imm | Stack)
-    dst: destination register (Register)
-Store:
-    src: source register which destination gets value from (Register)
-    dst: destination on the stack (Stack)
-SetLessThan(U):
-    src1: *left* < right (Stack | Register | Imm)
-    src2: left < *right* (Stack | Register | Imm)
-    dst: (Stack | Register)
-Imm:
-    [value for the node with this as a child (Int)]
-Stack:
-    [address away from sp where the value is at (Int)]
-Register:
-    [register that node with this as a child uses (String)]
-Ret, Not, Neg, Add, Sub, Eq, Ne, Le, Lt, Ge, Gt:
+RISC_node_types is a dictionary mapping the name of a type of RISC node to either a list of possible children or a dictionary mapping the name of a child to a list of possible types for that child. Depending on the value, the node will have different structures:
+Empty list: the node should have no children
+List: the node should have one child in the list of possible children
+Dictionary: the node should have one child for each key in the dictionary, and the child for each key should be in the list of possible types for that key
     -
 """
 

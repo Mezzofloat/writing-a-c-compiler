@@ -1,51 +1,10 @@
 from astnode.ASTNode import ASTNode
 
 """
-Definitions for the types of x86 nodes:
-Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
-
-Program:
-    function contained in the program (Function)
-Function:
-    name: name of the function (Identifier)
-    instructions: list of instructions (Instructions)
-Identifier:
-    [name for the node with this as a child (String)]
-Instructions:
-    list of assembly instructions (Binary | Unary | Mov | Sext | Ret | Cmp | Jmp | JmpCC | SetCC | Identifier)
-Binary:
-    op: binary operation being applied to destination (Add | Sub | Mult)
-    src: left operand (Stack | Register | Imm)
-    dst: right operand, and destination of operation (Register | Stack)
-    (unable to operate on Stack and Stack)
-Unary:
-    op: unary operation being applied to destination (Not | Neg | Div)
-    dst: destination of operation (Register | Stack)
-    (for Div, dst is the dividend and EDX:EAX is destination)
-Mov:
-    src: source from which destination gets its value (Stack | Register | Imm)
-    dst: destination, which is set to the value in source (Register | Stack)
-    (unable to move from Stack to Stack)
-Stack:
-    [address on the stack that the node with this as a child is using (Int)]
-    (Pseudo is ultimately converted to this)
-Register:
-    [register that the node with this as a child is referring to (String)]
-Imm:
-    [value for the node with this as a child (Int)]
-Cmp:
-    left: left comparand (Imm, Register, Pseudo, Stack)
-    right: right comparand (Imm, Register, Pseudo, Stack)
-Jmp:
-    label to jump to (Identifier)
-JmpCC:
-    cond: condition to jump if (E | NE | G | GE | L | LE)
-    label: label to jump to (Identifier)
-SetCC:
-    cond: condition to set byte to (E | NE | G | GE | L | LE)
-    dst: byte to set (Register)
-Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend), E, NE, G, GE, L, LE:
-    -
+x86_node_types is a dictionary mapping the name of a type of x86 node to either a list of possible children or a dictionary mapping the name of a child to a list of possible types for that child. Depending on the value, the node will have different structures:
+Empty list: the node should have no children
+List: the node should have one child in the list of possible children
+Dictionary: the node should have one child for each key in the dictionary, and the child for each key should be in the list of possible types for that key
 """
 
 x86_node_types = {

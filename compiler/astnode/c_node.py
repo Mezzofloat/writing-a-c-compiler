@@ -1,31 +1,10 @@
 from astnode.ASTNode import ASTNode
 
 """
-Definitions for the types of C nodes:
-Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
-
-Program:
-    function contained in the program (Function)
-Function:
-    name: name of the function (Identifier)
-    body: body of the function (Return)
-Identifier: 
-    [name for the node with this as a child (String)]
-Return:
-    expression being returned (Constant | Unary | Binary)
-Constant:
-    [value for the node with this as a child (Int)]
-Unary:
-    op: unary operator that acts on the inner expression (Complement | Negate)
-    inner_exp: the expression that is being acted on (Constant | Unary | Binary)
-Binary:
-    op: binary operator that acts on the left and right operands (Add | Sub | Multiply | Divide | Modulus
-                                                                | And | Or | Equal | NotEqual | LessThan
-                                                                | LessOrEqual | GreaterThan | GreaterOrEqual)
-    left: left operand (Constant | Unary | Binary)
-    right: right operand (Constant | Unary | Binary)
-Complement, Negate, Add, Sub, Multiply, Divide, Modulus, Not, And, Or, etc.:
-    -
+C_node_types is a dictionary mapping the name of a type of C node to either a list of possible children or a dictionary mapping the name of a child to a list of possible types for that child. Depending on the value, the node will have different structures:
+Empty list: the node should have no children
+List: the node should have one child in the list of possible children
+Dictionary: the node should have one child for each key in the dictionary, and the child for each key should be in the list of possible types for that key
 """
 
 C_node_types = {

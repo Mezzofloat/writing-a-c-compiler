@@ -1,38 +1,10 @@
 from astnode.ASTNode import ASTNode
 
 """
-Definitions for the types of ATTACK nodes:
-Format: (if ident is tuple: in []) name_of_node \n\t (if no children: -, if multiple: name_of_child:) objective (type1 | type2)
-
-Program:
-    function contained in the program (Function)
-Function:
-    name: name of the function (Identifier)
-    instructions: list of instructions (Instructions)
-Instructions:
-    list of ATTACK instructions (Binary | Unary | Return | Jump | JumpIfZero | JumpIfNotZero | Identifier)
-Binary:
-    op: operation (Add | Sub | Multiply | Divide | Modulus | Equal | NotEqual | LessThan | LessOrEqual | GreaterThan | GreaterOrEqual)
-    src1: left operand (Constant | Variable)
-    src2: right operand (Constant | Variable)
-    dst: destination of operation (Variable)
-Unary:
-    op: operation (Complement | Negate | Copy)
-    src: operand (Constant | Variable)
-    dst: destination of operation (Variable)
-Constant:
-    [value for the node with this as a child (Int)]
-Variable:
-    temporary name for this variable (Identifier)
-Return:
-    expression being returned (Constant | Variable | Unary | Binary)
-Jump:
-    label to jump to (Identifier)
-JumpIfZero, JumpIfNotZero:
-    cond: condition to compare to zero (Constant | Variable)
-    label: label to jump to (Identifier)
-Complement, Negate, Add, Sub, Multiply, Divide, Modulus, Copy:
-    -
+ATTACK_node_types is a dictionary mapping the name of a type of ATTACK node to either a list of possible children or a dictionary mapping the name of a child to a list of possible types for that child. Depending on the value, the node will have different structures:
+Empty list: the node should have no children
+List: the node should have one child in the list of possible children
+Dictionary: the node should have one child for each key in the dictionary, and the child for each key should be in the list of possible types for that key
 """
 
 ATTACK_node_types = {
