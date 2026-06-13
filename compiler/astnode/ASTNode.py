@@ -34,8 +34,11 @@ class ASTNode:
                 keys = list(self.child.keys())
 
                 for i in range(len(keys)):
-                    child = keys[i]
-                    s += f"{child}={self.child[child]}"
+                    entry = keys[i]
+                    if type(self.child[entry]) is list:
+                        s += print_list(self.child[entry])
+                    else:
+                        s += f"{entry}={self.child[entry]}"
 
                     if i != len(keys) - 1:
                         s += "\n"
