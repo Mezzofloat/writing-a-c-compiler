@@ -11,18 +11,18 @@ def emit_risc(node: RISC_node) -> str:
             s = f".globl {name}\n{name}:\n"
 
             insts = node.child["instructions"]
-            s += emit_risc(insts)
+            for inst in insts:
+                s += emit_risc(inst)
 
             return s
-        case "Instructions":
+        case "Instruction":
             s = ""
 
-            for inst in node.child:
-                if type(inst.ident) is tuple and inst.ident[0] == "Identifier":
-                    s += emit_risc(inst) + ':\n'
-                else:
-                    s += '\t' + emit_risc(inst) + '\n'
-             
+            if type(node.child.ident) is tuple and node.child.ident[0] == "Identifier":
+                s += emit_risc(node.child) + ':\n'
+            else:
+                s += '\t' + emit_risc(node.child) + '\n'
+
             return s
         case "Load":
             if node.child["src"].ident[0] == "Imm":

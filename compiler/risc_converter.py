@@ -27,14 +27,14 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
 
                 if type(outcome) is list:
                     for entry in outcome:
-                        newinst.append(entry)
+                        newinst.append(RISC_node("Instruction", entry))
 
                 else:
-                    newinst.append(outcome)
+                    newinst.append(RISC_node("Instruction", outcome))
 
             return RISC_node("Function", {
                 "name": name,
-                "instructions": RISC_node("Instructions", newinst)
+                "instructions": newinst
             })
         case ("Identifier", _):
             return RISC_node(node.ident)
@@ -561,7 +561,6 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
         case "LessOrEqual":
             return RISC_node("Le")
 
-
 def replace_pseudo_registers(ast: RISC_node):
     if ast.ident == "Program":
         if type(ast.child) is list:
@@ -570,8 +569,7 @@ def replace_pseudo_registers(ast: RISC_node):
         else:
             replace_pseudo_registers(ast.child)
     elif ast.ident == "Function":
-        # functions should have a list of instructions, which I am calling replace_pseudo on
-        replace_pseudo(ast.child["instructions"].child)
+        replace_pseudo(ast.child["instructions"])
     else:
         raise ValueError(f"Replace function called on {ast}")
 
@@ -581,7 +579,11 @@ def replace_pseudo(instructions: list[RISC_node]):
     offset = 0
     mappings = {}
 
-    for inst in instructions:
+    unwrapped_instructions = []
+    for instr in instructions:
+        unwrapped_instructions.append(instr.child)
+
+    for inst in unwrapped_instructions:
         if inst.child and type(inst.child) is dict:
             # consider the binaries
             if "src1" in inst.child and inst.child["src1"].ident == "Pseudo":
@@ -641,11 +643,13 @@ def fix_instructions(ast: RISC_node):
             fix_instructions(ast.child)
     elif ast.ident == "Function":
         # functions should have a list of instructions, which I am calling fix on
-        fix(ast.child["instructions"].child)
+        fix(ast.child["instructions"])
     else:
         raise ValueError(f"fix_instructions called on {ast}")
 
 def fix(instructions: list[RISC_node]):
+    unwrapped = [instr.child for instr in instructions]
+
     # formerly AllocateStack
     if allocate_offset > 0:
         amount = RISC_node(("Imm", -allocate_offset))
@@ -657,11 +661,11 @@ def fix(instructions: list[RISC_node]):
             "dst": sp
         })
 
-        instructions.insert(0, new_inst)
+        unwrapped.insert(0, new_inst)
 
     i = 0
-    while i < len(instructions):
-        instr = instructions[i]
+    while i < len(unwrapped):
+        instr = unwrapped[i]
         print(instr)
         
         if type(instr.child) is not dict:
@@ -687,8 +691,8 @@ def fix(instructions: list[RISC_node]):
                     "dst": rs1_scratch
                 })
 
-                instructions[i].child["src1"] = rs1_scratch
-                instructions.insert(i, load_src1)
+                unwrapped[i].child["src1"] = rs1_scratch
+                unwrapped.insert(i, load_src1)
                 i += 1
                 continue
 
@@ -700,8 +704,8 @@ def fix(instructions: list[RISC_node]):
                     "dst": rs2_scratch
                 })
 
-                instructions[i].child["src2"] = rs2_scratch
-                instructions.insert(i, load_src2)
+                unwrapped[i].child["src2"] = rs2_scratch
+                unwrapped.insert(i, load_src2)
                 i += 1
                 continue
 
@@ -713,8 +717,8 @@ def fix(instructions: list[RISC_node]):
                     "dst": operand_scratch
                 })
                 
-                instructions[i].child["src"] = operand_scratch
-                instructions.insert(i, load_src)
+                unwrapped[i].child["src"] = operand_scratch
+                unwrapped.insert(i, load_src)
                 i += 1
                 continue
 
@@ -726,8 +730,8 @@ def fix(instructions: list[RISC_node]):
                     "dst": dst
                 })
 
-                instructions[i].child["dst"] = dst_scratch
-                instructions.insert(i+1, store_dst)
+                unwrapped[i].child["dst"] = dst_scratch
+                unwrapped.insert(i+1, store_dst)
                 i += 2
                 continue
         
@@ -745,4 +749,7 @@ def fix(instructions: list[RISC_node]):
             "dst": sp
         })
 
-        instructions.insert(-1, new_inst)
+        unwrapped.insert(-1, new_inst)
+    
+    instructions.clear()
+    instructions.extend([RISC_node("Instruction", instr) for instr in unwrapped])
