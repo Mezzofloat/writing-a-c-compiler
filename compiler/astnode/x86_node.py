@@ -48,87 +48,72 @@ Ret, Not, Neg, Add, Sub, Mult, Div, Sext (sign-extend), E, NE, G, GE, L, LE:
     -
 """
 
+x86_node_types = {
+    "Program": ["Function"],
+    "Function": {"name": ["Identifier"], "instructions": ["Instruction*"]},
+    "Instruction": ['Binary', 'Unary', 'Mov', 'Sext', 'Ret', 'Cmp', 'Jmp', 'JmpCC', 'SetCC', 'Identifier', 'AllocateStack'],
+    "Binary": {"op": ['Add', 'Sub', 'Mult'],
+               "src": ['Pseudo', 'Stack', 'Register', 'Imm'],
+               "dst": ['Pseudo', 'Stack', 'Register']},
+    "Unary": {"op": ["Not", "Neg", "Div"],
+              "dst": ['Pseudo', 'Stack','Register','Imm']},
+    "Cmp": {"left": ['Pseudo', 'Stack', 'Register', 'Imm'],
+            "right": ['Pseudo', 'Stack', 'Register', 'Imm']},
+    "Jmp": ['Identifier'],
+    "JmpCC": {"cond": ['E', 'NE', 'G', 'GE', 'L', 'LE'],
+              "label": ['Identifier']},
+    "SetCC": {"cond": ['E', 'NE', 'G', 'GE', 'L', 'LE'],
+              "dst": ['Pseudo', 'Stack', 'Register', 'Imm']},
+    "Mov": {"src": ['Pseudo', 'Stack', 'Register', 'Imm'],
+            "dst": ['Pseudo', 'Stack', 'Register']},
+    "AllocateStack": ["Imm"],
+    "Pseudo": ["Identifier"],
+    "Not": [],
+    "Neg": [],
+    "Add": [],
+    "Sub": [],
+    "Mult": [],
+    "Div": [],
+    "Sext": [],
+    "E": [],
+    "NE": [],
+    "G": [],
+    "GE": [],
+    "L": [],
+    "LE": [],
+    "Ret": []
+}
+
 class x86_node(ASTNode):
     def __init__(self, ident, child=None):
         super().__init__(ident)
         
-        try:
-            LIST = 0
-            VALUE = ['Imm', 'Pseudo', 'Stack', 'Register']
-
-            def expect(*args):
-                if len(args) == 1:
-                    if type(args[0]) is not list or type(child) is not x86_node:
-                        raise TypeError(f"Error in function call of expect({args})")
-                    
-                    ls = args[0]
-                    
-                    if child.ident not in ls and child.ident[0] not in ls:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
-                elif len(args) == 2:
-                    if args[0] == LIST:
-                        for entry in child: # type: ignore
-                            if entry.ident not in args[1] and entry.ident[0] not in args[1]:
-                                raise AssertionError(f"Error in asserting grammar on {self}")
-                            
-                        return
-
-                    if type(args[0]) is not str or type(args[1]) is not list or type(child) is not dict:
-                        raise TypeError(f"Error in function call of expect({args})")
-                    
-                    key = args[0]
-                    ls = args[1]
-
-                    if child[key].ident not in ls and child[key].ident[0] not in ls:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
-                elif len(args) == 0:
+        if ident not in x86_node_types:
+            if type(ident) is not tuple:
+                raise ValueError(f"unexpected node {ident}")
+        else:
+            vals = x86_node_types[ident]
+            if type(vals) is dict:
+                for key, ls in vals.items():
+                    in_list = False
+                    for accepted_type in ls:
+                        if accepted_type.endswith('*'):
+                            for item in child[key]:
+                                if item.ident == accepted_type[:-1] or item.ident[0] == accepted_type[:-1]:
+                                    in_list = True
+                        else:
+                            if child[key].ident == accepted_type or child[key].ident[0] == accepted_type:
+                                in_list = True
+                    if not in_list:
+                        raise ValueError(f"{key} should be in {ls} but got {child[key]} for node {ident}")
+            elif type(vals) is list:
+                if len(vals) == 0:
                     if child is not None:
-                        raise AssertionError(f"Error in asserting grammar on {self}")
+                        raise ValueError(f"unexpected child {child} for node {ident}")
                 else:
-                    raise SyntaxError("Incorrect number of arguments")
-                
-            match ident:
-                case "Program":
-                    expect(["Function"])
-                case "Function":
-                    expect("name", ["Identifier"])
-                    expect("instructions", ["Instructions"])
-                case "Instructions":
-                    expect(LIST, ['Binary', 'Unary', 'Mov', 'Sext', 'Ret', 'Cmp', 'Jmp', 'JmpCC', 'SetCC', 'Identifier'])
-                case "Unary":
-                    expect("op", ["Not", "Neg", "Div"])
-                    expect("dst", ['Pseudo', 'Stack','Register','Imm'])
-                case "Binary":
-                    expect("op", ['Add', 'Sub', 'Mult'])
-                    expect("src", ['Pseudo', 'Stack', 'Register', 'Imm'])
-                    expect("dst", ['Pseudo', 'Stack', 'Register'])
-                case "Cmp":
-                    expect("left", VALUE)
-                    expect("right", VALUE)
-                case "Jmp":
-                    expect(['Identifier'])
-                case "JmpCC":
-                    expect("cond", ['E', 'NE', 'G', 'GE', 'L', 'LE'])
-                    expect("label", ['Identifier'])
-                case "SetCC":
-                    expect("cond", ['E', 'NE', 'G', 'GE', 'L', 'LE'])
-                    expect("dst", VALUE)
-                case "Mov":
-                    expect("src", ['Pseudo', 'Stack', 'Register', 'Imm'])
-                    expect("dst", ['Pseudo', 'Stack', 'Register'])
-                case "AllocateStack":
-                    expect(["Imm"])
-                case "Pseudo":
-                    expect(["Identifier"])
-                case "Not" | "Neg" | "Add" | "Sub" | "Mult" | "Div" | ("Identifier", _) | ("Imm", _) | ("Stack", _) | ("Register", _) | "Ret" | "Sext" | "E" | "NE" | 'G' | 'GE' | 'L' | 'LE':
-                    expect()
-                case _:
-                    raise ValueError(f"unexpected node {ident}")
-        except AttributeError:
-            raise AssertionError(f"Error in accessing attribute; {child} is either None or wrong type")
-        except KeyError:
-            raise AssertionError(f"Error in accessing dict; {child} is either not dict or doesn't have required key")
-        except IndexError:
-            raise AssertionError(f"Error in indexing tuple; {child} doesn't have a tuple somewhere")
-        finally:
-            self.child = child
+                    if child.ident not in vals and child.ident[0] not in vals:
+                        raise ValueError(f"unexpected child {child} for node {ident}")
+            else:
+                raise TypeError(f"unexpected type of node {ident} in x86_node_types")
+        
+        self.child = child

@@ -64,15 +64,15 @@ def emit_x86(node: x86_node) -> str:
             s = f"\t.globl {name}\n"
             s += name + ":\n"
             s += "\tpushq\t%rbp\n\tmovq\t%rsp, %rbp\n"
-            s += emit_x86(node.child["instructions"])
+            for inst in node.child["instructions"]:
+                s += emit_x86(inst)
             return s
-        case "Instructions":
+        case "Instruction":
             s = ""
-            for inst in node.child:
-                if inst.ident[0] == "Identifier":
-                    s += inst.ident[1] + ':\n'
-                else:
-                    s += "\t" + emit_x86(inst) + "\n"
+            if node.child.ident[0] == "Identifier":
+                s += node.child.ident[1] + ':\n'
+            else:
+                s += "\t" + emit_x86(node.child) + "\n"
             return s
         case "Mov":
             s = f"movl\t{emit_x86(node.child["src"])}, {emit_x86(node.child["dst"])}"

@@ -182,13 +182,13 @@ def attack_to_x86_ast(node: ATTACK_node) -> x86_node:
 
                 if type(outcome) is list:
                     for entry in outcome:
-                        new_instructions.append(entry)
+                        new_instructions.append(x86_node("Instruction", entry))
                 else:
-                    new_instructions.append(attack_to_x86_ast(instr))
+                    new_instructions.append(x86_node("Instruction", outcome))
             
             func = x86_node("Function", {
                 "name": attack_to_x86_ast(node.child["name"]),
-                "instructions": x86_node("Instructions", new_instructions)
+                "instructions": new_instructions
             })
 
             return func
@@ -244,8 +244,7 @@ def replace_pseudo_registers(ast: x86_node):
         else:
             replace_pseudo_registers(ast.child)
     elif ast.ident == "Function":
-        # functions should have a list of instructions, which I am calling replace_pseudo on
-        replace_pseudo(ast.child["instructions"].child)
+        replace_pseudo(ast.child["instructions"])
     else:
         raise ValueError(f"Replace function called on {ast}")
 
@@ -256,7 +255,11 @@ def replace_pseudo(instructions: list[x86_node]):
     offset = 0
     mappings = {}
 
+    unwrapped_instructions = []
     for instr in instructions:
+        unwrapped_instructions.append(instr.child)
+
+    for instr in unwrapped_instructions:
         if instr.child and type(instr.child) is dict:
             # consider the cmp
             if "left" in instr.child and instr.child["left"].ident == "Pseudo":
@@ -340,21 +343,23 @@ def fix_instructions(ast: x86_node):
             fix_instructions(ast.child)
     elif ast.ident == "Function":
         # functions should have a list of instructions, which I am calling fix on
-        fix(ast.child["instructions"].child)
+        fix(ast.child["instructions"])
     else:
         raise ValueError(f"fix_instructions called on {ast}")
 
 # fix the instructions in this list if needed
 def fix(instructions: list[x86_node]):
+    unwrapped = [instr.child for instr in instructions]
+    
     amount = x86_node(("Imm", allocate_offset))
     new_instruction = x86_node("AllocateStack", amount)
 
-    instructions.insert(0, new_instruction)
+    unwrapped.insert(0, new_instruction)
     
     i = 0
 
-    while i < len(instructions):
-        instr = instructions[i]
+    while i < len(unwrapped):
+        instr = unwrapped[i]
         #print(instr)
 
         if instr.ident == "Unary" and instr.child["op"].ident == "Div" and instr.child["dst"].ident[0] == "Imm":
@@ -371,8 +376,8 @@ def fix(instructions: list[x86_node]):
                 "dst": reg
             })
 
-            instructions[i] = mov
-            instructions.insert(i+1, div)
+            unwrapped[i] = mov
+            unwrapped.insert(i+1, div)
 
         if instr.child and type(instr.child) is dict:
             if instr.ident == "Binary" and instr.child["op"].ident == "Mult" and instr.child["dst"].ident[0] == "Stack":
@@ -393,9 +398,9 @@ def fix(instructions: list[x86_node]):
                     "dst": instr.child["dst"]
                 })
 
-                instructions[i] = movToScratch
-                instructions.insert(i+1, mult)
-                instructions.insert(i+2, movBack)
+                unwrapped[i] = movToScratch
+                unwrapped.insert(i+1, mult)
+                unwrapped.insert(i+2, movBack)
             elif "src" in instr.child and "dst" in instr.child:
                 if instr.child["src"].ident[0] == "Stack" and instr.child["dst"].ident[0] == "Stack":
                     r10d = x86_node(("Register", "%r10d"))
@@ -415,8 +420,8 @@ def fix(instructions: list[x86_node]):
 
                     instr2 = x86_node(instr.ident, binop)
 
-                    instructions[i] = instr1
-                    instructions.insert(i+1, instr2)
+                    unwrapped[i] = instr1
+                    unwrapped.insert(i+1, instr2)
             elif instr.ident == "Cmp":
                 scratch_reg_left = x86_node(("Register", "%r10d"))
                 scratch_reg_right = x86_node(("Register", "%r11d"))
@@ -448,6 +453,11 @@ def fix(instructions: list[x86_node]):
                     "right": right
                 })
 
-                instructions[i] = cmpl
-                instructions[i:i] = newops
+                unwrapped[i] = cmpl
+                unwrapped[i:i] = newops
         i += 1
+
+    instructions.clear()
+
+    rewrapped = [x86_node("Instruction", instr) for instr in unwrapped]
+    instructions.extend(rewrapped)
