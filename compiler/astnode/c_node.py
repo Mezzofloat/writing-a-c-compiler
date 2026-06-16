@@ -62,7 +62,7 @@ class C_node(ASTNode):
                                 if item.ident == accepted_type[:-1] or item.ident[0] == accepted_type[:-1]:
                                     in_list = True
                         elif accepted_type.endswith('?'):
-                            if key not in child or child[key] is None:
+                            if child[key] is None:
                                 in_list = True
                             elif child[key].ident == accepted_type[:-1] or child[key].ident[0] == accepted_type[:-1]:
                                 in_list = True

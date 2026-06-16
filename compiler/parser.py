@@ -88,18 +88,17 @@ def parse_declaration() -> C_node:
     expect("int")
     ident = parse_identifier()
 
-    node = C_node("Declaration", {
-        "name": ident
-    })
-
+    init = None
     if tokens[token_idx] == "=":
         token_idx += 1
         init = parse_exp(0)
-
-        node.child["init"] = init
     
     expect(";")
 
+    node = C_node("Declaration", {
+        "name": ident,
+        "init": init
+    })
     return node
 
 def parse_factor() -> C_node:
