@@ -18,8 +18,9 @@ argparser = argparse.ArgumentParser()
 argparser.add_argument('path', help="Path to the file to compile")
 argparser.add_argument('--lex', action="store_true")
 argparser.add_argument('--parse', action="store_true")
-argparser.add_argument('--codegen', action="store_true")
+argparser.add_argument('--validate', action="store_true")
 argparser.add_argument('--tacky', action='store_true')
+argparser.add_argument('--codegen', action="store_true")
 argparser.add_argument('-S', action="store_true")
 
 argparser.add_argument('--assembly-lang', '-l', choices=['risc-v', 'x86'])
@@ -70,6 +71,10 @@ if args.time:
 
 if args.parse:
     print('stopping at parse')
+    exit(0)
+
+if args.validate:
+    print('stopping at semantic validation')
     exit(0)
 
 # convert the C AST generated earlier to an ATTACK AST
@@ -133,6 +138,12 @@ if args.time:
 
 if args.codegen:
     print('stopping at codegen')
+    exit(0)
+
+assembly_code = emit_code(Assembly_ast)
+
+if args.S:
+    print('stopping at assembly code')
     exit(0)
 
 # emit the assembly code for each node in the tree
