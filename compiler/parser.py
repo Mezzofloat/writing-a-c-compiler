@@ -37,23 +37,69 @@ def parse_function() -> C_node:
     expect("void")
     expect(")")
     expect("{")
-    statement = parse_statement()
+
+    block_items = []
+    while tokens[token_idx] != "}":
+        block_items.append(parse_block_item())
+
     expect("}")
 
     node = C_node("Function", {
         "name": ident,
-        "body": statement
+        "body": block_items
     })
     return node
+
+def parse_block_item() -> C_node:
+    global token_idx
+
+    next = tokens[token_idx]
+
+    if next == "int":
+        return C_node("BlockItem", parse_declaration())
+    else:
+        return C_node("BlockItem", parse_statement())
 
 def parse_statement() -> C_node:
     global token_idx
 
-    expect("return")
-    exp = parse_exp(0)
+    next = tokens[token_idx]
+
+    if next == "return":
+        expect("return")
+        exp = parse_exp(0)
+        expect(";")
+
+        node = C_node("Return", exp)
+        return C_node("Statement", node)
+    elif next == ";":
+        expect(";")
+        null = C_node("Null")
+        return C_node("Statement", null)
+    else:
+        exp = parse_exp(0)
+        expect(";")
+
+        return C_node("Statement", exp)    
+
+def parse_declaration() -> C_node:
+    global token_idx
+
+    expect("int")
+    ident = parse_identifier()
+
+    node = C_node("Declaration", {
+        "name": ident
+    })
+
+    if tokens[token_idx] == "=":
+        token_idx += 1
+        init = parse_exp(0)
+
+        node.child["init"] = init
+    
     expect(";")
 
-    node = C_node("Return", exp)
     return node
 
 def parse_factor() -> C_node:
@@ -78,6 +124,10 @@ def parse_factor() -> C_node:
         expect(")")
 
         return inner_exp
+    elif type(next) is tuple and next[0] == "Identifier":
+        var_ident = parse_identifier()
+
+        return C_node("Var", var_ident)
     
     raise SyntaxError(f"Expected expression but got {tokens[token_idx]}")
 
@@ -94,24 +144,37 @@ bin_precedence = {
     "==": 60,
     "!=": 60,
     "&&": 20,
-    "||": 10
+    "||": 10,
+    "=": 1
 }
 
 def parse_exp(min_prec: int) -> C_node:
+    global token_idx
+
     left = parse_factor()
     next = tokens[token_idx]
     while next in bin_precedence and bin_precedence[next] >= min_prec:
-        operator = parse_binop()
-        right = parse_exp(bin_precedence[next] + 10)
+        if next == "=":
+            token_idx += 1
+            right = parse_exp(1)
 
-        new = C_node("Binary", {
-            "op": operator,
-            "left": left,
-            "right": right
-        })
+            left = C_node("Assignment", {
+                "lvalue": left,
+                "exp": right
+            })
+            next = tokens[token_idx]
+        else:
+            operator = parse_binop()
+            right = parse_exp(bin_precedence[next] + 10)
 
-        left = new
-        next = tokens[token_idx]
+            new = C_node("Binary", {
+                "op": operator,
+                "left": left,
+                "right": right
+            })
+
+            left = new
+            next = tokens[token_idx]
     
     return left
 
