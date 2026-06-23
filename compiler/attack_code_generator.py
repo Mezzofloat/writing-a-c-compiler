@@ -115,6 +115,17 @@ def exp_to_attack(exp_node : C_node, instruc):
             return ATTACK_node(exp_node.ident)
         case "And" | "Or" :
             return None
+        case "Var":
+            return ATTACK_node("Variable", exp_node.child)
+        case "Assignment":
+            result = exp_to_attack(exp_node.child["exp"], instruc)
+            variable = exp_to_attack(exp_node.child["lvalue"], instruc)
+            instruc.append(ATTACK_node("Unary", {
+                "op": ATTACK_node("Copy"),
+                "src": result,
+                "dst": variable
+            }))
+            return variable
         case _:
             raise ValueError(f"Given invalid expression node: {exp_node}")
 
@@ -125,14 +136,27 @@ def c_to_attack(node : C_node):
         case "Function":
             insts = []
 
-            exp_to_attack(node.child["body"], insts)
+            for block_item in node.child["body"]:
+                block_child = block_item.child
+                if block_child.ident == "Statement":
+                    statement = block_child.child
+                    if statement.ident != "Null":
+                        exp_to_attack(statement, insts)
+                elif block_child.ident == "Declaration":
+                    if block_child.child["init"]:
+                        assignment = C_node("Assignment", {
+                            "lvalue": C_node("Var", block_child.child["name"]),
+                            "exp": block_child.child["init"]
+                        })
+                        exp_to_attack(assignment, insts)
 
             newinsts = []
 
             for inst in insts:
                 newinsts.append(ATTACK_node("Instruction", inst))
-
-            print(newinsts[0].child)
+            
+            return_zero = ATTACK_node("Return", ATTACK_node(("Constant", 0)))
+            newinsts.append(ATTACK_node("Instruction", return_zero))
 
             func = ATTACK_node("Function", {
                 "name": node.child["name"],
