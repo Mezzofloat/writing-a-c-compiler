@@ -1,9 +1,10 @@
 import re
 
-keywords = ["int", "void", "return"]
+keywords = ["int", "void", "return", "if", "else"]
 token_matchers = [r"[a-zA-Z_]\w*\b", r"[0-9]+\b", r"\(", r"\)", r"{", r"}",
                   r";", r"~", r"--", r"-", r"\*", r"\+", r"/", r"%",
-                  r"&&", r"&", r"\|\|", r"\|", r"==", r"!=", r"<=", r">=", r"<", r">", r"=", r"!"]
+                  r"&&", r"&", r"\|\|", r"\|", r"==", r"!=", r"<=", r">=", r"<", r">", r"=", r"!",
+                  r"\?", r":"]
 
 def lex(content: str) -> list:
     tokens = []

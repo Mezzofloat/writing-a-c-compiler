@@ -7,7 +7,7 @@ List: the node should have one child in the list of possible children
 Dictionary: the node should have one child for each key in the dictionary, and the child for each key should be in the list of possible types for that key
 """
 
-expr = ['Constant', 'Unary', 'Binary', 'Var', 'Assignment']
+expr = ['Constant', 'Unary', 'Binary', 'Var', 'Assignment', 'Conditional']
 
 C_node_types = {
     "Program": ["Function"],
@@ -19,9 +19,11 @@ C_node_types = {
                 "right": expr},
     "Var": ["Identifier"],
     "Assignment": {"lvalue": expr, "exp": expr},
-    "Statement": ['Constant', 'Unary', 'Binary', 'Var', 'Assignment', 'Return', 'Null'],
+    "Statement": ['Constant', 'Unary', 'Binary', 'Var', 'Assignment', 'Conditional', 'Return', 'Null', 'If'],
     "Declaration": {"name": ["Identifier"], "init?": expr},
     "BlockItem": ["Statement", "Declaration"],
+    "If": {"cond": expr, "then": ["Statement"], "else?": ["Statement"]},
+    "Conditional": {"cond": expr, "true": expr, "false": expr},
     "Complement": [],
     "Negate": [],
     "Add": [],

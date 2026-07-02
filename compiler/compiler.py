@@ -51,6 +51,7 @@ if args.time:
 
 # lex path.i
 tokens = lex(file_contents)
+#print(tokens)
 
 if args.time:
     lex_time = time.time()

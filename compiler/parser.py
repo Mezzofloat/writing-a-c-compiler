@@ -72,6 +72,26 @@ def parse_statement() -> C_node:
 
         node = C_node("Return", exp)
         return C_node("Statement", node)
+    elif next == "if":
+        expect('if')
+        expect('(')
+        control = parse_exp(0)
+        expect(')')
+        then = parse_statement()
+        ifnot_keyword = tokens[token_idx]
+        if ifnot_keyword == "else":
+            expect('else')
+            ifnot = parse_statement()
+        else:
+            ifnot = None
+
+        ifelse = C_node('If', {
+            "cond": control,
+            "then": then,
+            "else": ifnot
+        })
+
+        return C_node("Statement", ifelse)
     elif next == ";":
         expect(";")
         null = C_node("Null")
@@ -144,6 +164,7 @@ bin_precedence = {
     "!=": 60,
     "&&": 20,
     "||": 10,
+    "?": 5,
     "=": 1
 }
 
@@ -161,7 +182,14 @@ def parse_exp(min_prec: int) -> C_node:
                 "lvalue": left,
                 "exp": right
             })
-            next = tokens[token_idx]
+        elif next == "?":
+            middle = parse_conditional_middle()
+            right = parse_exp(bin_precedence[next])
+            left = C_node("Conditional", {
+                "cond": left,
+                "true": middle,
+                "false": right
+            })
         else:
             operator = parse_binop()
             right = parse_exp(bin_precedence[next] + 10)
@@ -173,9 +201,18 @@ def parse_exp(min_prec: int) -> C_node:
             })
 
             left = new
-            next = tokens[token_idx]
+        
+        next = tokens[token_idx]
     
     return left
+
+def parse_conditional_middle() -> C_node:
+    global token_idx
+
+    expect("?")
+    middle = parse_exp(0)
+    expect(":")
+    return middle
 
 def parse_unop() -> C_node:
     global token_idx
