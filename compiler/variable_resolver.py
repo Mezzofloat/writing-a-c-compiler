@@ -26,12 +26,21 @@ def resolve_declaration(node):
     })
 
 def resolve_statement(node):
+    if node is None:
+        return None
+
     statement = node.child
     if statement.ident == "Return":
         exp = resolve_exp(statement.child)
         return C_node("Statement", C_node("Return", exp))
     elif statement.ident == "Null":
         return node
+    elif statement.ident == "If":
+        return C_node("Statement", C_node("If", {
+            "cond": resolve_exp(statement.child["cond"]),
+            "then": resolve_statement(statement.child["then"]),
+            "else": resolve_statement(statement.child["else"])
+        }))
     else:
         exp = resolve_exp(statement)
         return C_node("Statement", exp)
@@ -60,5 +69,11 @@ def resolve_exp(node):
                 "left": resolve_exp(node.child["left"]),
                 "right": resolve_exp(node.child["right"])
             })
-        case _:
+        case ("Constant", _):
             return node
+        case "Conditional":
+            return C_node("Conditional", {
+                "cond": resolve_exp(node.child["cond"]),
+                "true": resolve_exp(node.child["true"]),
+                "false": resolve_exp(node.child["false"])
+            })
