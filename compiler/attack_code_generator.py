@@ -126,10 +126,77 @@ def exp_to_attack(exp_node : C_node, instruc):
                 "dst": variable
             }))
             return variable
+        case "Conditional":
+            cond = exp_to_attack(exp_node.child["cond"], instruc)
+            e2_label = ATTACK_node(("Identifier", make_branch_label()))
+            end_label = ATTACK_node(("Identifier", make_branch_label()))
+            
+            jump_if_zero = ATTACK_node("JumpIfZero", {
+                "cond": cond,
+                "label": e2_label
+            })
+            instruc.append(jump_if_zero)
+
+            result = ATTACK_node("Variable", ATTACK_node(("Identifier", make_tmp())))
+
+            e1 = exp_to_attack(exp_node.child["true"], instruc)
+            copy_e1 = ATTACK_node("Unary", {
+                "op": ATTACK_node("Copy"),
+                "src": e1,
+                "dst": result
+            })
+            instruc.append(copy_e1)
+
+            jump_to_end = ATTACK_node("Jump", end_label)
+            instruc.append(jump_to_end)
+            
+            instruc.append(e2_label)
+
+            e2 = exp_to_attack(exp_node.child["false"], instruc)
+            copy_e2 = ATTACK_node("Unary", {
+                "op": ATTACK_node("Copy"),
+                "src": e2,
+                "dst": result
+            })
+            instruc.append(copy_e2)
+
+            instruc.append(end_label)
+            return result
         case _:
             raise ValueError(f"Given invalid expression node: {exp_node}")
 
     #print(f"I am returning nothing because I am {exp_node}")
+
+def statement_to_attack(statement_node : C_node, instruc):
+    statement = statement_node.child
+    print(statement.ident)
+    if statement.ident == "If":
+        cond = exp_to_attack(statement.child["cond"], instruc)
+        
+        end_label = ATTACK_node(("Identifier", make_branch_label()))
+        if statement.child["else"]:
+            else_label = ATTACK_node(("Identifier", make_branch_label()))
+        else:
+            else_label = end_label
+
+        jump_if_zero = ATTACK_node("JumpIfZero", {
+            "cond": cond,
+            "label": else_label
+        })
+        
+        instruc.append(jump_if_zero)
+
+        statement_to_attack(statement.child["then"], instruc)
+        jump_to_end = ATTACK_node("Jump", end_label)
+        instruc.append(jump_to_end)
+
+        if statement.child["else"]:
+            instruc.append(else_label)
+            statement_to_attack(statement.child["else"], instruc)
+        instruc.append(end_label)
+
+    elif statement.ident != "Null":
+        exp_to_attack(statement, instruc)
 
 def c_to_attack(node : C_node):
     match node.ident:
@@ -139,9 +206,7 @@ def c_to_attack(node : C_node):
             for block_item in node.child["body"]:
                 block_child = block_item.child
                 if block_child.ident == "Statement":
-                    statement = block_child.child
-                    if statement.ident != "Null":
-                        exp_to_attack(statement, insts)
+                    statement_to_attack(block_child, insts)
                 elif block_child.ident == "Declaration":
                     if block_child.child["init"]:
                         assignment = C_node("Assignment", {
