@@ -421,7 +421,7 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                     opcode = 'Gt'
 
                     setcond = RISC_node("SetLessThan", {
-                        "src1": reg_one,
+                        "src1": zero,
                         "src2": diff,
                         "dst": dst
                     })
@@ -445,7 +445,7 @@ def attack_to_risc_ast(node: ATTACK_node) -> RISC_node:
                     
                     setcond = RISC_node("SetLessThan", {
                         "src1": diff,
-                        "src2": reg_one,
+                        "src2": zero,
                         "dst": dst
                     })
                 case 'LessOrEqual':
