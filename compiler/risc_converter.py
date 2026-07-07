@@ -751,7 +751,8 @@ def fix(instructions: list[RISC_node]):
             "dst": sp
         })
 
-        unwrapped.insert(-1, new_inst)
+        unwrapped.insert(-3, new_inst) # insert before actual return
+        unwrapped.insert(-1, new_inst) # insert before extra return
     
     instructions.clear()
     instructions.extend([RISC_node("Instruction", instr) for instr in unwrapped])
