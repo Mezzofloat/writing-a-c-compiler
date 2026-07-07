@@ -11,11 +11,6 @@ from parser import parse_program
 from variable_resolver import resolve_declaration, resolve_statement
 from attack_code_generator import c_to_attack
 
-import risc_converter
-import risc_emitter
-import x86_converter
-import x86_emitter
-
 argparser = argparse.ArgumentParser()
 argparser.add_argument('path', help="Path to the file to compile")
 argparser.add_argument('--lex', action="store_true")
@@ -113,6 +108,9 @@ if args.tacky:
 
 # this is where the table splits, risc-v and x86 have different ASTs
 if args.assembly_lang == "risc-v":
+    import risc_converter
+    import risc_emitter
+
     prefix = "/common/users/shared/cs211_s26_5678/rv32gc-ilp32/bin/riscv32-unknown-linux-gnu-"
     print("compiling for risc-v")
 
@@ -122,6 +120,9 @@ if args.assembly_lang == "risc-v":
 
     emit_code = risc_emitter.emit_risc
 else:
+    import x86_converter
+    import x86_emitter
+
     prefix = ""
     print("compiling for x86")
 
