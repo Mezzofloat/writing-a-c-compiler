@@ -696,9 +696,11 @@ def fix(instructions: list[RISC_node]):
                 i += 1
                 continue
 
+        accepted_imms = ['Add', 'Xor']
+
         if "src2" in instr.child:
             src2 = instr.child["src2"]
-            if src2.ident[0] == "Imm" or src2.ident[0] == "Stack":
+            if (src2.ident[0] == "Imm" and instr.child["op"].ident not in accepted_imms) or src2.ident[0] == "Stack":
                 load_src2 = RISC_node("Load", {
                     "src": src2,
                     "dst": rs2_scratch
