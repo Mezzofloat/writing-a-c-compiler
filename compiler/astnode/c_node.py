@@ -11,7 +11,7 @@ expr = ['Constant', 'Unary', 'Binary', 'Var', 'Assignment', 'Conditional']
 
 C_node_types = {
     "Program": ["Function"],
-    "Function": {"name": ["Identifier"], "body": ["BlockItem*"]},
+    "Function": {"name": ["Identifier"], "body": ["Block"]},
     "Return": expr,
     "Unary": {"op": ["Complement", "Negate", "Not"], "inner_exp": expr},
     "Binary": {"op": ['Add', 'Sub', 'Multiply', 'Divide', 'Modulus', 'And', 'Or', 'LessThan', 'GreaterThan', 'Equal', 'NotEqual', 'LessOrEqual', 'GreaterOrEqual'], 
@@ -19,7 +19,8 @@ C_node_types = {
                 "right": expr},
     "Var": ["Identifier"],
     "Assignment": {"lvalue": expr, "exp": expr},
-    "Statement": ['Constant', 'Unary', 'Binary', 'Var', 'Assignment', 'Conditional', 'Return', 'Null', 'If'],
+    "Block": ["BlockItem*"],
+    "Statement": ['Constant', 'Unary', 'Binary', 'Var', 'Assignment', 'Conditional', 'Return', 'Null', 'If', 'Block'],
     "Declaration": {"name": ["Identifier"], "init?": expr},
     "BlockItem": ["Statement", "Declaration"],
     "If": {"cond": expr, "then": ["Statement"], "else?": ["Statement"]},
@@ -79,8 +80,20 @@ class C_node(ASTNode):
                     if child is not None:
                         raise ValueError(f"unexpected child {child} for node {ident}")
                 else:
-                    if child.ident not in vals and child.ident[0] not in vals:
-                        raise ValueError(f"unexpected child {child} for node {ident}")
+                    in_list = False
+                    for accepted_type in vals:
+                        if accepted_type.endswith('*'):
+                            if len(child) == 0:
+                                in_list = True
+                                break
+                            for item in child:
+                                if item.ident == accepted_type[:-1] or item.ident[0] == accepted_type[:-1]:
+                                    in_list = True
+                        else:
+                            if child.ident == accepted_type or child.ident[0] == accepted_type:
+                                in_list = True
+                    if not in_list:
+                        raise ValueError(f"child {child} not in {vals} for node {ident}")
             else:
                 raise TypeError(f"unexpected type of node {ident} in C_node_types")
 

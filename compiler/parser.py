@@ -36,6 +36,16 @@ def parse_function() -> C_node:
     expect("(")
     expect("void")
     expect(")")
+    
+    node = parse_block()
+    return C_node("Function", {
+        "name": ident,
+        "body": node
+    })
+
+def parse_block() -> C_node:
+    global token_idx
+
     expect("{")
 
     block_items = []
@@ -44,10 +54,7 @@ def parse_function() -> C_node:
 
     expect("}")
 
-    node = C_node("Function", {
-        "name": ident,
-        "body": block_items
-    })
+    node = C_node("Block", block_items)
     return node
 
 def parse_block_item() -> C_node:
@@ -96,6 +103,9 @@ def parse_statement() -> C_node:
         expect(";")
         null = C_node("Null")
         return C_node("Statement", null)
+    elif next == "{":
+        block = parse_block()
+        return C_node("Statement", block)
     else:
         exp = parse_exp(0)
         expect(";")
